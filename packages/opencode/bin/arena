@@ -1,0 +1,154 @@
+#!/usr/bin/env node
+
+import childProcess from "node:child_process"
+import path from "node:path"
+import fs from "node:fs"
+import { fileURLToPath } from "node:url"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+process.env.ARENA = "1"
+const projectDirectory = process.cwd()
+
+const args = process.argv.slice(2)
+const auto = args.includes("--auto")
+const json = args.includes("--json")
+const resumeIndex = args.indexOf("--resume")
+if (resumeIndex >= 0 && (!args[resumeIndex + 1] || args[resumeIndex + 1].startsWith("-"))) {
+  console.error("Arena: --resume requires a session ID")
+  process.exit(1)
+}
+const resume = resumeIndex >= 0 ? args[resumeIndex + 1] : undefined
+const filtered = args.filter((arg, index) => {
+  if (arg === "--auto" || arg === "--json") return false
+  if (resumeIndex >= 0 && (index === resumeIndex || index === resumeIndex + 1)) return false
+  return true
+})
+const modelIndex = filtered.findIndex((arg) => arg === "--model" || arg === "-m")
+const inlineModelIndex = filtered.findIndex((arg) => arg.startsWith("--model="))
+const model = modelIndex >= 0 ? filtered[modelIndex + 1] : inlineModelIndex >= 0 ? filtered[inlineModelIndex].slice(8) : undefined
+if ((modelIndex >= 0 && (!model || model.startsWith("-"))) || (inlineModelIndex >= 0 && !model)) {
+  console.error("Arena: --model requires a model ID")
+  process.exit(1)
+}
+const [requestedProvider, requestedModel] = model?.includes("/") ? model.split(/\/(.+)/) : ["ollama", model]
+const localProvider = requestedProvider === "ollama" || requestedProvider === "lmstudio" ? requestedProvider : undefined
+const bareModel = localProvider ? requestedModel : undefined
+if (localProvider && bareModel) {
+  const currentConfig = (() => {
+    try {
+      return JSON.parse(process.env.OPENCODE_CONFIG_CONTENT ?? "{}")
+    } catch {
+      return {}
+    }
+  })()
+  currentConfig.model = `${localProvider}/${bareModel}`
+  currentConfig.provider = {
+    ...(currentConfig.provider ?? {}),
+    [localProvider]: {
+      ...(currentConfig.provider?.[localProvider] ?? {}),
+      name: localProvider === "ollama" ? "Ollama" : "LM Studio",
+      api:
+        currentConfig.provider?.[localProvider]?.api ??
+        (localProvider === "ollama" ? "http://127.0.0.1:11434/v1" : "http://127.0.0.1:1234/v1"),
+      env: currentConfig.provider?.[localProvider]?.env ?? [],
+      models: {
+        ...(currentConfig.provider?.[localProvider]?.models ?? {}),
+        [bareModel]: {
+          id: bareModel,
+          name: bareModel,
+          tool_call: true,
+          reasoning: true,
+          temperature: true,
+          attachment: false,
+          modalities: { input: ["text"], output: ["text"] },
+          cost: { input: 0, output: 0 },
+          limit: { context: 32768, output: 8192 },
+        },
+      },
+    },
+  }
+  process.env.OPENCODE_CONFIG_CONTENT = JSON.stringify(currentConfig)
+  if (modelIndex >= 0) filtered[modelIndex + 1] = `${localProvider}/${bareModel}`
+  if (inlineModelIndex >= 0) filtered[inlineModelIndex] = `--model=${localProvider}/${bareModel}`
+}
+const SUBCOMMANDS = new Set([
+  "run", "models", "agent", "auth", "acp", "mcp", "serve", "web", "stats",
+  "export", "import", "github", "pr", "session", "upgrade", "uninstall",
+  "completion", "debug", "attach", "battle", "leaderboard"
+])
+
+const valueOptions = new Set(["--model", "-m", "--agent", "--format", "--file", "-f", "--title", "--attach", "--port", "--variant", "--command"])
+let hasMessage = false
+let afterSeparator = false
+for (let index = 0; index < filtered.length; index++) {
+  const arg = filtered[index]
+  if (afterSeparator) {
+    hasMessage = true
+    break
+  }
+  if (arg === "--") {
+    afterSeparator = true
+    continue
+  }
+  if (valueOptions.has(arg)) {
+    index++
+    continue
+  }
+  if (arg.startsWith("--") && arg.includes("=")) continue
+  if (!arg.startsWith("-")) {
+    if (SUBCOMMANDS.has(arg)) {
+      break
+    }
+    hasMessage = true
+    break
+  }
+}
+const command = ["run"]
+if (json) command.push("--format", "json")
+if (resume) command.push("--session", resume)
+if (auto) {
+  process.env.OPENCODE_PERMISSION = JSON.stringify({
+    "*": "allow",
+    read: { "*.env": "deny", "*.env.*": "deny", "*.env.local": "deny" },
+    bash: {
+      "git commit*": "deny",
+      "*git commit*": "deny",
+      "*git*commit*": "deny",
+      "git push*": "deny",
+      "*git push*": "deny",
+      "*git*push*": "deny",
+      "git reset --hard*": "deny",
+      "*git reset --hard*": "deny",
+      "*git*reset --hard*": "deny",
+      "git clean*": "deny",
+      "*git clean*": "deny",
+      "git checkout --*": "deny",
+      "*git checkout --*": "deny",
+      "git restore*": "deny",
+      "*git restore*": "deny",
+    },
+  })
+}
+
+const target = process.env.OPENCODE_BIN_PATH ?? path.join(__dirname, process.platform === "win32" ? "opencode.exe" : "opencode")
+const forwarded = hasMessage
+  ? command.concat(filtered)
+  : resume
+    ? ["--session", resume, ...filtered]
+    : filtered
+const source = path.join(__dirname, "../src/index.ts")
+const runtime = process.env.BUN ?? (process.execPath.endsWith("/bun") || process.execPath.endsWith("\\bun.exe") ? process.execPath : "bun")
+const sourceCheckout = !process.env.OPENCODE_BIN_PATH && fs.existsSync(source)
+const result = !sourceCheckout && fs.existsSync(target)
+  ? childProcess.spawnSync(target, forwarded, { stdio: "inherit", env: process.env })
+  : childProcess.spawnSync(runtime, ["run", "--conditions=browser", source, ...forwarded], {
+      cwd: path.join(__dirname, ".."),
+      env: { ...process.env, ARENA_CWD: projectDirectory },
+      stdio: "inherit",
+    })
+if (result.error) {
+  console.error(result.error.message)
+  process.exit(1)
+}
+process.exit(typeof result.status === "number" ? result.status : 1)
