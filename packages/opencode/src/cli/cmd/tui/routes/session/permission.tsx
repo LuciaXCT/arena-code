@@ -1,4 +1,5 @@
 import { createStore } from "solid-js/store"
+import { Flag } from "@/flag/flag"
 import { createMemo, For, Match, Show, Switch } from "solid-js"
 import { useKeyboard, useTerminalDimensions, type JSX } from "@opentui/solid"
 import type { TextareaRenderable } from "@opentui/core"
@@ -132,11 +133,11 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
           body={
             <Switch>
               <Match when={props.request.always.length === 1 && props.request.always[0] === "*"}>
-                <TextBody title={"This will allow " + props.request.permission + " until OpenCode is restarted."} />
+                <TextBody title={"This will allow " + props.request.permission + ` until ${Flag.ARENA ? "arena.ai" : "OpenCode"} is restarted.`} />
               </Match>
               <Match when={true}>
                 <box paddingLeft={1} gap={1}>
-                  <text fg={theme.textMuted}>This will allow the following patterns until OpenCode is restarted</text>
+                  <text fg={theme.textMuted}>This will allow the following patterns until {Flag.ARENA ? "arena.ai" : "OpenCode"} is restarted</text>
                   <box>
                     <For each={props.request.always}>
                       {(pattern) => (
@@ -288,7 +289,7 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
           <text fg={theme.text}>Reject permission</text>
         </box>
         <box paddingLeft={1}>
-          <text fg={theme.textMuted}>Tell OpenCode what to do differently</text>
+          <text fg={theme.textMuted}>Tell {Flag.ARENA ? "arena.ai" : "OpenCode"} what to do differently</text>
         </box>
       </box>
       <box

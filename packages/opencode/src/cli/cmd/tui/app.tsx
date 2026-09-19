@@ -207,14 +207,14 @@ function App() {
     if (!terminalTitleEnabled() || Flag.OPENCODE_DISABLE_TERMINAL_TITLE) return
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle("OpenCode")
+      renderer.setTerminalTitle(Flag.ARENA ? "arena.ai" : "OpenCode")
       return
     }
 
     if (route.data.type === "session") {
       const session = sync.session.get(route.data.sessionID)
       if (!session || SessionApi.isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle("OpenCode")
+        renderer.setTerminalTitle(Flag.ARENA ? "arena.ai" : "OpenCode")
         return
       }
 
@@ -442,7 +442,7 @@ function App() {
       title: "Open docs",
       value: "docs.open",
       onSelect: () => {
-        open("https://opencode.ai/docs").catch(() => {})
+        open(Flag.ARENA ? "https://arena.ai/docs" : "https://opencode.ai/docs").catch(() => {})
         dialog.clear()
       },
       category: "System",
@@ -534,7 +534,9 @@ function App() {
         DialogAlert.show(
           dialog,
           "Warning",
-          "While openrouter is a convenient way to access LLMs your request will often be routed to subpar providers that do not work well in our testing.\n\nFor reliable access to models check out OpenCode Zen\nhttps://opencode.ai/zen",
+          Flag.ARENA
+            ? "While openrouter is a convenient way to access LLMs your request will often be routed to subpar providers that do not work well in our testing.\n\nFor reliable access to models check out arena.ai\nhttps://arena.ai"
+            : "While openrouter is a convenient way to access LLMs your request will often be routed to subpar providers that do not work well in our testing.\n\nFor reliable access to models check out OpenCode Zen\nhttps://opencode.ai/zen",
         ).then(() => kv.set("openrouter_warning", true))
       })
     }
@@ -596,7 +598,7 @@ function App() {
     toast.show({
       variant: "success",
       title: "Update Complete",
-      message: `OpenCode updated to v${evt.properties.version}`,
+      message: `${Flag.ARENA ? "arena.ai" : "OpenCode"} updated to v${evt.properties.version}`,
       duration: 5000,
     })
   })
@@ -605,7 +607,7 @@ function App() {
     toast.show({
       variant: "info",
       title: "Update Available",
-      message: `OpenCode v${evt.properties.version} is available. Run 'opencode upgrade' to update manually.`,
+      message: `${Flag.ARENA ? "arena.ai" : "OpenCode"} v${evt.properties.version} is available. Run '${Flag.ARENA ? "arena" : "opencode"} upgrade' to update manually.`,
       duration: 10000,
     })
   })

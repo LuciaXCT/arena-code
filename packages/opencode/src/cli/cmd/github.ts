@@ -1,4 +1,5 @@
 import path from "path"
+import { Flag } from "@/flag/flag"
 import { exec } from "child_process"
 import * as prompts from "@clack/prompts"
 import { map, pipe, sortBy, values } from "remeda"
@@ -236,7 +237,7 @@ export const GithubInstallCommand = cmd({
                 "",
                 "    3. Go to a GitHub issue and comment `/oc summarize` to see the agent in action",
                 "",
-                "   Learn more about the GitHub agent - https://opencode.ai/docs/github/#usage-examples",
+                `   Learn more about the GitHub agent - ${Flag.ARENA ? "https://arena.ai/docs/github/#usage-examples" : "https://opencode.ai/docs/github/#usage-examples"}`,
               ].join("\n"),
             )
           }

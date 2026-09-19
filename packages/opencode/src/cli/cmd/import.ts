@@ -1,4 +1,5 @@
 import type { Argv } from "yargs"
+import { Flag } from "@/flag/flag"
 import { Session } from "../../session"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
@@ -11,7 +12,7 @@ export const ImportCommand = cmd({
   describe: "import session data from JSON file or URL",
   builder: (yargs: Argv) => {
     return yargs.positional("file", {
-      describe: "path to JSON file or opencode.ai share URL",
+      describe: Flag.ARENA ? "path to JSON file or arena.ai share URL" : "path to JSON file or opencode.ai share URL",
       type: "string",
       demandOption: true,
     })

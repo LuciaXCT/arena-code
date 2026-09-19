@@ -1,4 +1,5 @@
 import { useSync } from "@tui/context/sync"
+import { Flag } from "@/flag/flag"
 import { createMemo, For, Show, Switch, Match } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useTheme } from "../../context/theme"
@@ -289,7 +290,7 @@ export function Sidebar(props: { sessionID: string }) {
                     ✕
                   </text>
                 </box>
-                <text fg={theme.textMuted}>OpenCode includes free models so you can start immediately.</text>
+                <text fg={theme.textMuted}>{Flag.ARENA ? "arena.ai" : "OpenCode"} includes free models so you can start immediately.</text>
                 <text fg={theme.textMuted}>
                   Connect from 75+ providers to use other models, including Claude, GPT, Gemini etc
                 </text>
