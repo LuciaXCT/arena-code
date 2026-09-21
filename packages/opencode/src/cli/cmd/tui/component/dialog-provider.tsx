@@ -30,6 +30,7 @@ export function createDialogProviderOptions() {
   const options = createMemo(() => {
     return pipe(
       sync.data.provider_next.all,
+      (providers) => providers.filter((provider) => provider.id !== "opencode"),
       sortBy((x) => PROVIDER_PRIORITY[x.id] ?? 99),
       map((provider) => ({
         title: provider.name,
@@ -213,7 +214,7 @@ function ApiMethod(props: ApiMethodProps) {
       title={props.title}
       placeholder="API key"
       description={
-        props.providerID === "opencode" ? (
+           props.providerID === "opencode" && !Flag.ARENA ? (
           <box gap={1}>
             <text fg={theme.textMuted}>
               {Flag.ARENA

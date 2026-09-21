@@ -99,7 +99,7 @@ export const TIPS = [
   "Enable {highlight}tui.scroll_acceleration{/highlight} for smooth macOS-style scrolling.",
   "Toggle username display in chat via command palette ({highlight}Ctrl+P{/highlight}).",
   `Run {highlight}docker run -it --rm ghcr.io/anomalyco/${APP_CMD}{/highlight} for containerized use.`,
-  `Use {highlight}/connect{/highlight} with ${Flag.ARENA ? "arena.ai" : "OpenCode Zen"} for curated, tested models.`,
+  `Use {highlight}/connect{/highlight} with ${Flag.ARENA ? "arena.ai" : "your configured provider"} for curated, tested models.`,
   "Commit your project's {highlight}AGENTS.md{/highlight} file to Git for team sharing.",
   "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs.",
   "Run {highlight}/help{/highlight} or {highlight}Ctrl+X H{/highlight} to show the help dialog.",
@@ -107,4 +107,3 @@ export const TIPS = [
   "Use {highlight}/rename{/highlight} to rename the current session.",
   "Press {highlight}Ctrl+Z{/highlight} to suspend the terminal and return to your shell.",
 ]
-

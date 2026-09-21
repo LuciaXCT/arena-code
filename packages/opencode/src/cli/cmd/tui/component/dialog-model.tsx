@@ -11,7 +11,7 @@ import * as fuzzysort from "fuzzysort"
 export function useConnected() {
   const sync = useSync()
   return createMemo(() =>
-    sync.data.provider.some((x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0)),
+    sync.data.provider.some((x) => x.id !== "opencode" && Object.values(x.models).some((y) => y.cost?.input !== 0)),
   )
 }
 
@@ -105,7 +105,7 @@ export function DialogModel(props: { providerID?: string }) {
     })
 
     const providerOptions = pipe(
-      sync.data.provider,
+      sync.data.provider.filter((provider) => provider.id !== "opencode"),
       sortBy(
         (provider) => provider.id !== "opencode",
         (provider) => provider.name,
