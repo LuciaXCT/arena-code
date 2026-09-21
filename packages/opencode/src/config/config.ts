@@ -40,12 +40,13 @@ export namespace Config {
     let result = await global()
 
     // Override with custom config if provided
-    if (Flag.OPENCODE_CONFIG) {
+    if (Flag.OPENCODE_CONFIG && !Flag.ARENA) {
       result = mergeConfigConcatArrays(result, await loadFile(Flag.OPENCODE_CONFIG))
       log.debug("loaded custom config", { path: Flag.OPENCODE_CONFIG })
     }
 
-    for (const file of ["opencode.jsonc", "opencode.json"]) {
+    const configFiles = Flag.ARENA ? ["arena.jsonc", "arena.json"] : ["opencode.jsonc", "opencode.json"]
+    for (const file of configFiles) {
       const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
       for (const resolved of found.toReversed()) {
         result = mergeConfigConcatArrays(result, await loadFile(resolved))
@@ -69,18 +70,19 @@ export namespace Config {
     result.mode = result.mode || {}
     result.plugin = result.plugin || []
 
+    const configTarget = Flag.ARENA ? ".arena" : ".opencode"
     const directories = [
       Global.Path.config,
       ...(await Array.fromAsync(
         Filesystem.up({
-          targets: [".opencode"],
+          targets: [configTarget],
           start: Instance.directory,
           stop: Instance.worktree,
         }),
       )),
       ...(await Array.fromAsync(
         Filesystem.up({
-          targets: [".opencode"],
+          targets: [configTarget],
           start: Global.Path.home,
           stop: Global.Path.home,
         }),
@@ -93,8 +95,11 @@ export namespace Config {
     }
 
     for (const dir of unique(directories)) {
-      if (dir.endsWith(".opencode") || dir === Flag.OPENCODE_CONFIG_DIR) {
-        for (const file of ["opencode.jsonc", "opencode.json"]) {
+      const isArena = Flag.ARENA
+      const endsWithConfigDir = isArena ? dir.endsWith(".arena") : dir.endsWith(".opencode")
+      if (endsWithConfigDir || dir === Flag.OPENCODE_CONFIG_DIR) {
+        const cfgFiles = isArena ? ["arena.jsonc", "arena.json"] : ["opencode.jsonc", "opencode.json"]
+        for (const file of cfgFiles) {
           log.debug(`loading config from ${path.join(dir, file)}`)
           result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
           // to satisfy the type checker
@@ -201,7 +206,7 @@ export namespace Config {
       if (!md.data) continue
 
       const name = (() => {
-        const patterns = ["/.opencode/command/", "/command/"]
+        const patterns = ["/.arena/command/", "/.opencode/command/", "/command/"]
         const pattern = patterns.find((p) => item.includes(p))
 
         if (pattern) {
@@ -241,11 +246,13 @@ export namespace Config {
 
       // Extract relative path from agent folder for nested agents
       let agentName = path.basename(item, ".md")
-      const agentFolderPath = item.includes("/.opencode/agent/")
-        ? item.split("/.opencode/agent/")[1]
-        : item.includes("/agent/")
-          ? item.split("/agent/")[1]
-          : agentName + ".md"
+      const agentFolderPath = item.includes("/.arena/agent/")
+        ? item.split("/.arena/agent/")[1]
+        : item.includes("/.opencode/agent/")
+          ? item.split("/.opencode/agent/")[1]
+          : item.includes("/agent/")
+            ? item.split("/agent/")[1]
+            : agentName + ".md"
 
       // If agent is in a subfolder, include folder path in name
       if (agentFolderPath.includes("/")) {
@@ -983,12 +990,16 @@ export namespace Config {
   export type Info = z.output<typeof Info>
 
   export const global = lazy(async () => {
+    const isArena = Flag.ARENA
+    const cfgFiles = isArena
+      ? [path.join(Global.Path.config, "config.json"), path.join(Global.Path.config, "arena.json"), path.join(Global.Path.config, "arena.jsonc")]
+      : [path.join(Global.Path.config, "config.json"), path.join(Global.Path.config, "opencode.json"), path.join(Global.Path.config, "opencode.jsonc")]
     let result: Info = pipe(
       {},
-      mergeDeep(await loadFile(path.join(Global.Path.config, "config.json"))),
-      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.json"))),
-      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
-    )
+      mergeDeep(await loadFile(cfgFiles[0])),
+      mergeDeep(await loadFile(cfgFiles[1])),
+      mergeDeep(await loadFile(cfgFiles[2])),
+    ) as Info
 
     await import(path.join(Global.Path.config, "config"), {
       with: {
@@ -998,7 +1009,7 @@ export namespace Config {
       .then(async (mod) => {
         const { provider, model, ...rest } = mod.default
         if (provider && model) result.model = `${provider}/${model}`
-        result["$schema"] = "https://opencode.ai/config.json"
+        result["$schema"] = Flag.ARENA ? "https://arena.ai/config.json" : "https://opencode.ai/config.json"
         result = mergeDeep(result, rest)
         await Bun.write(path.join(Global.Path.config, "config.json"), JSON.stringify(result, null, 2))
         await fs.unlink(path.join(Global.Path.config, "config"))
@@ -1089,7 +1100,7 @@ export namespace Config {
     const parsed = Info.safeParse(data)
     if (parsed.success) {
       if (!parsed.data.$schema) {
-        parsed.data.$schema = "https://opencode.ai/config.json"
+        parsed.data.$schema = Flag.ARENA ? "https://arena.ai/config.json" : "https://opencode.ai/config.json"
         await Bun.write(configFilepath, JSON.stringify(parsed.data, null, 2))
       }
       const data = parsed.data

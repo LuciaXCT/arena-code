@@ -6,9 +6,17 @@ export interface ArenaConfig {
   provider?: string
   model?: string
   apiKeyEnv?: string
-  providers?: Record<string, { apiKeyEnv?: string; baseURL?: string; model?: string }>
+  providers?: Record<string, ArenaProviderConfig>
   [key: string]: unknown
 }
+
+export interface ArenaProviderConfig {
+  apiKeyEnv?: string
+  baseURL?: string
+  models?: Record<string, string | { model?: string; name?: string }>
+}
+
+type OpenCodeProvider = Record<string, unknown>
 
 const CONFIG_PATH = path.join(os.homedir(), ".config", "arena", "config.yaml")
 const CONFIG_PATH_ALT = path.join(os.homedir(), ".config", "arena", "config.yml")
@@ -36,7 +44,6 @@ export async function loadConfig(): Promise<{ config: ArenaConfig; path: string 
   const candidates = [CONFIG_PATH, CONFIG_PATH_ALT]
   // Allow override via env
   if (process.env.ARENA_CONFIG) candidates.unshift(process.env.ARENA_CONFIG)
-  if (process.env.OPENCODE_CONFIG) candidates.unshift(process.env.OPENCODE_CONFIG)
 
   for (const p of candidates) {
     try {
@@ -57,6 +64,36 @@ export async function loadConfig(): Promise<{ config: ArenaConfig; path: string 
     }
   }
   return { config: {}, path: null }
+}
+
+export function toOpenCodeConfig(config: ArenaConfig): Record<string, unknown> {
+  const providers: Record<string, OpenCodeProvider> = {}
+  const selected: Record<string, OpenCodeProvider> = config.provider
+    ? {
+        [config.provider]: {
+          ...(config.apiKeyEnv ? { env: [config.apiKeyEnv] } : {}),
+          ...(config.model ? { models: { [config.model]: { id: config.model, name: config.model } } } : {}),
+        },
+      }
+    : {}
+  for (const [id, value] of Object.entries(config.providers ?? {})) {
+    const provider = value as ArenaProviderConfig
+    const models = Object.fromEntries(
+      Object.entries(provider.models ?? {}).map(([modelID, model]) => {
+        const item = typeof model === "string" ? { id: modelID, name: model } : { id: model.model ?? modelID, name: model.name }
+        return [modelID, item]
+      }),
+    )
+    providers[id] = {
+      ...(provider.apiKeyEnv ? { env: [provider.apiKeyEnv] } : {}),
+      ...(provider.baseURL ? { api: provider.baseURL, options: { baseURL: provider.baseURL } } : {}),
+      ...(Object.keys(models).length ? { models } : {}),
+    }
+  }
+
+  const result: Record<string, unknown> = { provider: { ...selected, ...providers } }
+  if (config.provider && config.model) result.model = `${config.provider}/${config.model}`
+  return result
 }
 
 export function resolveApiKey(config: ArenaConfig): string | undefined {

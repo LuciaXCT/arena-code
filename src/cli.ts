@@ -19,12 +19,18 @@ import childProcess from "node:child_process"
 import path from "node:path"
 import fs from "node:fs"
 import { fileURLToPath } from "node:url"
+import { loadConfig, toOpenCodeConfig } from "./config"
+import { ARENA_AGENT_TYPES } from "./modes"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Activate arena branding
 process.env.ARENA = "1"
 const projectDirectory = process.cwd()
+const arenaConfig = await loadConfig()
+process.env.OPENCODE_CONFIG_CONTENT = JSON.stringify(toOpenCodeConfig(arenaConfig.config))
+delete process.env.OPENCODE_CONFIG
+process.env.ARENA_AGENT_TYPES = JSON.stringify(ARENA_AGENT_TYPES)
 
 // ─── Argument parsing ──────────────────────────────────────────────────────────
 
@@ -60,25 +66,22 @@ const [requestedProvider, requestedModel] = model?.includes("/") ? model.split(/
 const localProvider = requestedProvider === "ollama" || requestedProvider === "lmstudio" ? requestedProvider : undefined
 const bareModel = localProvider ? requestedModel : undefined
 if (localProvider && bareModel) {
-  const currentConfig = (() => {
-    try {
-      return JSON.parse(process.env.OPENCODE_CONFIG_CONTENT ?? "{}")
-    } catch {
-      return {}
-    }
-  })()
+  const currentConfig = toOpenCodeConfig(arenaConfig.config) as {
+    model?: string
+    provider?: Record<string, Record<string, unknown>>
+  }
   currentConfig.model = `${localProvider}/${bareModel}`
   currentConfig.provider = {
     ...(currentConfig.provider ?? {}),
     [localProvider]: {
-      ...(currentConfig.provider?.[localProvider] ?? {}),
+      ...((currentConfig.provider?.[localProvider] as Record<string, unknown> | undefined) ?? {}),
       name: localProvider === "ollama" ? "Ollama" : "LM Studio",
       api:
-        currentConfig.provider?.[localProvider]?.api ??
+        (currentConfig.provider?.[localProvider]?.api as string | undefined) ??
         (localProvider === "ollama" ? "http://127.0.0.1:11434/v1" : "http://127.0.0.1:1234/v1"),
-      env: currentConfig.provider?.[localProvider]?.env ?? [],
+      env: (currentConfig.provider?.[localProvider]?.env as string[] | undefined) ?? [],
       models: {
-        ...(currentConfig.provider?.[localProvider]?.models ?? {}),
+        ...((currentConfig.provider?.[localProvider]?.models as Record<string, unknown> | undefined) ?? {}),
         [bareModel]: {
           id: bareModel,
           name: bareModel,
