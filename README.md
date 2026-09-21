@@ -216,6 +216,40 @@ Notes:
 - `user-invocable: false` hides the skill from the `/` menu but keeps it model-invoked. `disable-model-invocation: true` hides it from the model.
 - Only `name` + `description` stay in context. Body and `references/`, `examples/`, `scripts/` load on demand, so keep `SKILL.md` lean and reference supporting files explicitly.
 
+## Plugins (Claude Code compatible)
+
+Arena installs and runs Claude Code plugins unmodified: same `plugin.json` manifest, same `skills/` + `commands/` + `agents/` layout, same `plugin:skill` namespacing, same marketplace format.
+
+```bash
+# Local folder, git repo, npm package, or marketplace entry
+arena plugin install ./my-plugin
+arena plugin install owner/repo --scope project
+arena plugin install npm:@scope/my-plugin
+arena plugin install review@team-market --scope project
+
+# Manage
+arena plugin list
+arena plugin enable review --yes
+arena plugin disable review
+arena plugin update review
+arena plugin validate ./my-plugin
+arena plugin uninstall review
+
+# Marketplaces (GitHub shorthand, git URL, local path, or JSON URL)
+arena plugin marketplace add ./my-marketplace --scope project
+arena plugin marketplace add acme-corp/arena-plugins
+arena plugin marketplace list
+arena plugin marketplace update
+arena plugin marketplace remove my-marketplace
+```
+
+Notes:
+
+- Default scope is global (`~/.config/arena/plugins/`). `--scope project` installs into `.arena/plugins/` so the team shares it.
+- Every install and enable shows a permission summary (source, skills, commands, agents) and asks for confirmation. Pass `--yes` for scripts, or run in a TTY-less environment which requires `--yes`.
+- Installed plugin skills appear as `/plugin:skill` slash commands and model-invocable skills. A new session picks them up (same as Claude Code `/reload-plugins`).
+- `hooks` and `mcpServers` in manifests are parsed and reported by `validate`, but not executed yet.
+
 ## Development Setup
 
 Requirements: Node `>=18`, Bun `>=1.0`.
