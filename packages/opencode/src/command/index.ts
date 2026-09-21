@@ -1,3 +1,4 @@
+import path from "path"
 import { BusEvent } from "@/bus/bus-event"
 import z from "zod"
 import { Config } from "../config/config"
@@ -6,6 +7,8 @@ import { Identifier } from "../id/id"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 import { MCP } from "../mcp"
+import { Skill } from "../skill"
+import { ConfigMarkdown } from "../config/markdown"
 
 export namespace Command {
   export const Event = {
@@ -48,6 +51,19 @@ export namespace Command {
     }
     if (template.includes("$ARGUMENTS")) result.push("$ARGUMENTS")
     return result
+  }
+
+  function skillTemplate(skill: Skill.Info, body: string): string {
+    const dir = path.dirname(skill.location)
+    let out = body
+      .replaceAll("${CLAUDE_SKILL_DIR}", dir)
+      .replaceAll("${ARENA_SKILL_DIR}", dir)
+      .replaceAll("$SKILL_DIR", dir)
+    const names = skill.args ?? []
+    names.forEach((item, index) => {
+      out = out.replaceAll(`$${item}`, `$${index + 1}`)
+    })
+    return out
   }
 
   export const Default = {
@@ -115,6 +131,26 @@ export namespace Command {
           })
         },
         hints: prompt.arguments?.map((_, i) => `$${i + 1}`) ?? [],
+      }
+    }
+
+    for (const skill of await Skill.allForMenu()) {
+      if (result[skill.name]) continue
+      const location = skill.location
+      const meta = { skill, location }
+      result[skill.name] = {
+        name: skill.name,
+        description: Skill.combinedDescription(skill),
+        ...(skill.model ? { model: skill.model } : {}),
+        ...(skill.skillContext === "fork" ? { subtask: true } : {}),
+        get template() {
+          return new Promise<string>(async (resolve) => {
+            const parsed = await ConfigMarkdown.parse(meta.location).catch(() => undefined)
+            const body = parsed?.content?.trim() ?? ""
+            resolve(skillTemplate(meta.skill, body))
+          })
+        },
+        hints: (skill.args ?? []).map((_, i) => `$${i + 1}`),
       }
     }
 
