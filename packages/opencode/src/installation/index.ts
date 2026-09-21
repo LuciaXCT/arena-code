@@ -58,9 +58,14 @@ export namespace Installation {
   }
 
   export async function method() {
-    if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl"
+    const isArena = Flag.ARENA
+    const appBin = isArena ? ".arena" : ".opencode"
+    if (process.execPath.includes(path.join(appBin, "bin"))) return "curl"
     if (process.execPath.includes(path.join(".local", "bin"))) return "curl"
     const exec = process.execPath.toLowerCase()
+
+    const pkgName = isArena ? "@pawbxj/arena-cli" : "opencode-ai"
+    const brewPkg = isArena ? "arena" : "opencode"
 
     const checks = [
       {
@@ -81,7 +86,7 @@ export namespace Installation {
       },
       {
         name: "brew" as const,
-        command: () => $`brew list --formula opencode`.throws(false).quiet().text(),
+        command: () => $`brew list --formula ${brewPkg}`.throws(false).quiet().text(),
       },
     ]
 
@@ -95,7 +100,7 @@ export namespace Installation {
 
     for (const check of checks) {
       const output = await check.command()
-      if (output.includes(check.name === "brew" ? "opencode" : "opencode-ai")) {
+      if (output.includes(check.name === "brew" ? brewPkg : pkgName)) {
         return check.name
       }
     }
@@ -111,6 +116,7 @@ export namespace Installation {
   )
 
   async function getBrewFormula() {
+    if (Flag.ARENA) return "arena"
     const tapFormula = await $`brew list --formula sst/tap/opencode`.throws(false).quiet().text()
     if (tapFormula.includes("opencode")) return "sst/tap/opencode"
     const coreFormula = await $`brew list --formula opencode`.throws(false).quiet().text()
@@ -119,22 +125,28 @@ export namespace Installation {
   }
 
   export async function upgrade(method: Method, target: string) {
+    const isArena = Flag.ARENA
     let cmd
     switch (method) {
       case "curl":
-        cmd = $`curl -fsSL https://opencode.ai/install | bash`.env({
-          ...process.env,
-          VERSION: target,
-        })
+        cmd = isArena
+          ? $`curl -fsSL https://arena.ai/install | bash`.env({
+              ...process.env,
+              VERSION: target,
+            })
+          : $`curl -fsSL https://opencode.ai/install | bash`.env({
+              ...process.env,
+              VERSION: target,
+            })
         break
       case "npm":
-        cmd = $`npm install -g opencode-ai@${target}`
+        cmd = isArena ? $`npm install -g @pawbxj/arena-cli@${target}` : $`npm install -g opencode-ai@${target}`
         break
       case "pnpm":
-        cmd = $`pnpm install -g opencode-ai@${target}`
+        cmd = isArena ? $`pnpm install -g @pawbxj/arena-cli@${target}` : $`pnpm install -g opencode-ai@${target}`
         break
       case "bun":
-        cmd = $`bun install -g opencode-ai@${target}`
+        cmd = isArena ? $`bun install -g @pawbxj/arena-cli@${target}` : $`bun install -g opencode-ai@${target}`
         break
       case "brew": {
         const formula = await getBrewFormula()
@@ -163,7 +175,7 @@ export namespace Installation {
 
   export const VERSION = typeof OPENCODE_VERSION === "string" ? OPENCODE_VERSION : "local"
   export const CHANNEL = typeof OPENCODE_CHANNEL === "string" ? OPENCODE_CHANNEL : "local"
-  export const USER_AGENT = `opencode/${CHANNEL}/${VERSION}/${Flag.OPENCODE_CLIENT}`
+  export const USER_AGENT = `${Flag.ARENA ? "arena.ai" : "opencode"}/${CHANNEL}/${VERSION}/${Flag.OPENCODE_CLIENT}`
 
   export async function latest(installMethod?: Method) {
     const detectedMethod = installMethod || (await method())
@@ -178,6 +190,15 @@ export namespace Installation {
           })
           .then((data: any) => data.versions.stable)
       }
+      if (formula === "arena") {
+        return fetch("https://formulae.brew.sh/api/formula/arena.json")
+          .then((res) => {
+            if (!res.ok) throw new Error(res.statusText)
+            return res.json()
+          })
+          .then((data: any) => data.versions.stable)
+          .catch(() => fetch("https://registry.npmjs.org/@codersteam%2Farena/latest").then((r) => r.json()).then((d: any) => d.version))
+      }
     }
 
     if (detectedMethod === "npm" || detectedMethod === "bun" || detectedMethod === "pnpm") {
@@ -187,6 +208,14 @@ export namespace Installation {
         return reg.endsWith("/") ? reg.slice(0, -1) : reg
       })
       const channel = CHANNEL
+      if (Flag.ARENA) {
+        return fetch(`${registry}/@codersteam%2Farena/${channel}`)
+          .then((res) => {
+            if (!res.ok) throw new Error(res.statusText)
+            return res.json()
+          })
+          .then((data: any) => data.version)
+      }
       return fetch(`${registry}/opencode-ai/${channel}`)
         .then((res) => {
           if (!res.ok) throw new Error(res.statusText)
@@ -195,6 +224,14 @@ export namespace Installation {
         .then((data: any) => data.version)
     }
 
+    if (Flag.ARENA) {
+      return fetch("https://api.github.com/repos/k1ruuuu/arena-cli/releases/latest")
+        .then((res) => {
+          if (!res.ok) throw new Error(res.statusText)
+          return res.json()
+        })
+        .then((data: any) => data.tag_name.replace(/^v/, ""))
+    }
     return fetch("https://api.github.com/repos/anomalyco/opencode/releases/latest")
       .then((res) => {
         if (!res.ok) throw new Error(res.statusText)

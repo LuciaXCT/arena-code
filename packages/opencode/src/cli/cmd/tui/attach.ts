@@ -1,9 +1,10 @@
 import { cmd } from "../cmd"
 import { tui } from "./app"
+import { Flag } from "@/flag/flag"
 
 export const AttachCommand = cmd({
   command: "attach <url>",
-  describe: "attach to a running opencode server",
+  describe: Flag.ARENA ? "attach to a running arena.ai server" : "attach to a running opencode server",
   builder: (yargs) =>
     yargs
       .positional("url", {

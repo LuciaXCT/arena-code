@@ -3,12 +3,14 @@ import { xdgData, xdgCache, xdgConfig, xdgState } from "xdg-basedir"
 import path from "path"
 import os from "os"
 
-const app = "opencode"
+function isArena(): boolean {
+  const v = process.env.ARENA?.toLowerCase()
+  return v === "1" || v === "true"
+}
 
-const data = path.join(xdgData!, app)
-const cache = path.join(xdgCache!, app)
-const config = path.join(xdgConfig!, app)
-const state = path.join(xdgState!, app)
+function getApp(): string {
+  return isArena() ? "arena" : "opencode"
+}
 
 export namespace Global {
   export const Path = {
@@ -16,12 +18,24 @@ export namespace Global {
     get home() {
       return process.env.OPENCODE_TEST_HOME || os.homedir()
     },
-    data,
-    bin: path.join(data, "bin"),
-    log: path.join(data, "log"),
-    cache,
-    config,
-    state,
+    get data() {
+      return path.join(xdgData!, getApp())
+    },
+    get bin() {
+      return path.join(Global.Path.data, "bin")
+    },
+    get log() {
+      return path.join(Global.Path.data, "log")
+    },
+    get cache() {
+      return path.join(xdgCache!, getApp())
+    },
+    get config() {
+      return path.join(xdgConfig!, getApp())
+    },
+    get state() {
+      return path.join(xdgState!, getApp())
+    },
   }
 }
 

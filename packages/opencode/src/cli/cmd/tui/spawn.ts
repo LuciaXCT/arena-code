@@ -3,6 +3,7 @@ import { Instance } from "@/project/instance"
 import path from "path"
 import { Server } from "@/server/server"
 import { upgrade } from "@/cli/upgrade"
+import { Flag } from "@/flag/flag"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 
 export const TuiSpawnCommand = cmd({
@@ -10,7 +11,7 @@ export const TuiSpawnCommand = cmd({
   builder: (yargs) =>
     withNetworkOptions(yargs).positional("project", {
       type: "string",
-      describe: "path to start opencode in",
+      describe: Flag.ARENA ? "path to start arena.ai in" : "path to start opencode in",
     }),
   handler: async (args) => {
     upgrade()

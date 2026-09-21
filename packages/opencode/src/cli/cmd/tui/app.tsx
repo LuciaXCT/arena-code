@@ -220,7 +220,7 @@ function App() {
 
       // Truncate title to 40 chars max
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`OC | ${title}`)
+      renderer.setTerminalTitle(`${Flag.ARENA ? "arena" : "OC"} | ${title}`)
     }
   })
 
@@ -536,7 +536,7 @@ function App() {
           "Warning",
           Flag.ARENA
             ? "While openrouter is a convenient way to access LLMs your request will often be routed to subpar providers that do not work well in our testing.\n\nFor reliable access to models check out arena.ai\nhttps://arena.ai"
-            : "While openrouter is a convenient way to access LLMs your request will often be routed to subpar providers that do not work well in our testing.\n\nFor reliable access to models check out OpenCode Zen\nhttps://opencode.ai/zen",
+            : "While openrouter is a convenient way to access LLMs your request will often be routed to subpar providers that do not work well in our testing.",
         ).then(() => kv.set("openrouter_warning", true))
       })
     }
@@ -662,7 +662,9 @@ function ErrorComponent(props: {
   })
   const [copied, setCopied] = createSignal(false)
 
-  const issueURL = new URL("https://github.com/anomalyco/opencode/issues/new?template=bug-report.yml")
+  const issueURL = new URL(
+    Flag.ARENA ? "https://github.com/codersteam/arena/issues/new?template=bug-report.yml" : "https://github.com/anomalyco/opencode/issues/new?template=bug-report.yml",
+  )
 
   // Choose safe fallback colors per mode since theme context may not be available
   const isLight = props.mode === "light"
@@ -684,7 +686,7 @@ function ErrorComponent(props: {
     )
   }
 
-  issueURL.searchParams.set("opencode-version", Installation.VERSION)
+  issueURL.searchParams.set(Flag.ARENA ? "arena-version" : "opencode-version", Installation.VERSION)
 
   const copyIssueURL = () => {
     Clipboard.copy(issueURL.toString()).then(() => {

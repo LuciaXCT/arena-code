@@ -27,6 +27,7 @@ import { EOL } from "os"
 import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
+import { Flag } from "./flag/flag"
 
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
@@ -42,7 +43,7 @@ process.on("uncaughtException", (e) => {
 
 const cli = yargs(hideBin(process.argv))
   .parserConfiguration({ "populate--": true })
-  .scriptName("opencode")
+  .scriptName(Flag.ARENA ? "arena" : "opencode")
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
@@ -70,8 +71,9 @@ const cli = yargs(hideBin(process.argv))
 
     process.env.AGENT = "1"
     process.env.OPENCODE = "1"
+    if (Flag.ARENA) process.env.ARENA = "1"
 
-    Log.Default.info("opencode", {
+    Log.Default.info(Flag.ARENA ? "arena.ai" : "opencode", {
       version: Installation.VERSION,
       args: process.argv.slice(2),
     })

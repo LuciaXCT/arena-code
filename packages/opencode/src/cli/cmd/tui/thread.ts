@@ -6,6 +6,7 @@ import path from "path"
 import { UI } from "@/cli/ui"
 import { iife } from "@/util/iife"
 import { Log } from "@/util/log"
+import { Flag } from "@/flag/flag"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 
 declare global {
@@ -14,12 +15,12 @@ declare global {
 
 export const TuiThreadCommand = cmd({
   command: "$0 [project]",
-  describe: "start opencode tui",
+  describe: Flag.ARENA ? "start arena.ai tui" : "start opencode tui",
   builder: (yargs) =>
     withNetworkOptions(yargs)
       .positional("project", {
         type: "string",
-        describe: "path to start opencode in",
+        describe: Flag.ARENA ? "path to start arena.ai in" : "path to start opencode in",
       })
       .option("model", {
         type: "string",

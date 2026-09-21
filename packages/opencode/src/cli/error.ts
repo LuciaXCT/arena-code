@@ -5,15 +5,19 @@ import { Provider } from "../provider/provider"
 import { UI } from "./ui"
 
 export function FormatError(input: unknown) {
-  if (MCP.Failed.isInstance(input))
-    return `MCP server "${input.data.name}" failed. Note, opencode does not support MCP authentication yet.`
+  if (MCP.Failed.isInstance(input)) {
+    const name = process.env.ARENA === "1" || process.env.ARENA?.toLowerCase() === "true" ? "arena.ai" : "opencode"
+    return `MCP server "${input.data.name}" failed. Note, ${name} does not support MCP authentication yet.`
+  }
   if (Provider.ModelNotFoundError.isInstance(input)) {
     const { providerID, modelID, suggestions } = input.data
+    const cmd = process.env.ARENA === "1" || process.env.ARENA?.toLowerCase() === "true" ? "arena" : "opencode"
+    const cfg = process.env.ARENA === "1" || process.env.ARENA?.toLowerCase() === "true" ? "arena.json" : "opencode.json"
     return [
       `Model not found: ${providerID}/${modelID}`,
       ...(Array.isArray(suggestions) && suggestions.length ? ["Did you mean: " + suggestions.join(", ")] : []),
-      `Try: \`opencode models\` to list available models`,
-      `Or check your config (opencode.json) provider/model names`,
+      `Try: \`${cmd} models\` to list available models`,
+      `Or check your config (${cfg}) provider/model names`,
     ].join("\n")
   }
   if (Provider.InitError.isInstance(input)) {
