@@ -295,10 +295,20 @@ if (fs.existsSync(siblingBin)) {
   trySpawn(siblingBin, forwarded, { env: process.env })
 }
 
-// 4. Source checkout (development mode — requires bun)
+// 4. Source checkout (development mode — requires bun AND installed deps)
 const sourceCheckout = path.join(__dirname, "../packages/opencode/src/index.ts")
 const opencodeDir = path.join(__dirname, "../packages/opencode")
+let useSourceCheckout = false
 if (fs.existsSync(sourceCheckout)) {
+  try {
+    // yargs is a declared dependency of the opencode workspace: if it does
+    // not resolve, this is not a working checkout (e.g. a stale global
+    // install shadowing the real one) — skip to the clean error below.
+    createRequire(path.join(opencodeDir, "package.json")).resolve("yargs")
+    useSourceCheckout = true
+  } catch {}
+}
+if (useSourceCheckout) {
   const bun = findBun()
   if (bun) {
     trySpawn(bun, ["run", "--conditions=browser", sourceCheckout, ...forwarded], {
