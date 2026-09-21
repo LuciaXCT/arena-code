@@ -106,7 +106,7 @@ if (localProvider && bareModel) {
 const SUBCOMMANDS = new Set([
   "run", "models", "agent", "auth", "acp", "mcp", "serve", "web", "stats",
   "export", "import", "github", "pr", "session", "upgrade", "uninstall",
-  "completion", "debug", "attach", "battle", "leaderboard",
+  "completion", "debug", "attach", "battle", "leaderboard", "plugin",
 ])
 
 const valueOptions = new Set([

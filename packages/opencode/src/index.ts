@@ -27,6 +27,7 @@ import { EOL } from "os"
 import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
+import { PluginCommand } from "./cli/cmd/plugin"
 import { Flag } from "./flag/flag"
 
 process.on("unhandledRejection", (e) => {
@@ -112,6 +113,9 @@ const cli = yargs(hideBin(process.argv))
     process.exit(1)
   })
   .strict()
+
+// Arena-only commands stay out of upstream opencode help.
+if (Flag.ARENA) cli.command(PluginCommand)
 
 try {
   await cli.parse()
