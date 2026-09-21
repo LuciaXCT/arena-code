@@ -110,6 +110,8 @@ arena --config ./arena.yaml "migrate the database schema"
 | `Side by side` | `arena side-by-side "prompt"` | Same prompt on two named models, both answers shown labeled, no vote recorded |
 | `DeepMode` | `arena --agent DeepMode "task"` or switch agent in TUI | Orchestrator agent for complex multi-stage work: plans first, verifies after |
 
+In the TUI, `tab` switches between the four native agents (`Battle`, `DeepMode`, `Side by side`, `Direct`); `Direct` is the default. The `Battle` and `Side by side` agents run the same workflow through subagents pinned to explicit models (the `task` tool accepts a `model` in `provider/model` format), and `Battle` records your verdict with the `arena_vote` tool so Elo rankings stay in sync with `arena leaderboard`.
+
 ## Configuration
 
 Arena loads configuration from:
