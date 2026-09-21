@@ -1,8 +1,20 @@
-import { test, expect } from "bun:test"
+import { afterAll, beforeAll, test, expect } from "bun:test"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Agent } from "../../src/agent/agent"
 import { PermissionNext } from "../../src/permission/next"
+
+// These cases cover stock opencode behavior, so force Arena mode off even
+// when another test file leaks ARENA=1 into this process.
+const originalArena = process.env.ARENA
+
+beforeAll(() => {
+  delete process.env.ARENA
+})
+
+afterAll(() => {
+  if (originalArena !== undefined) process.env.ARENA = originalArena
+})
 
 // Helper to evaluate permission for a tool with wildcard pattern
 function evalPerm(agent: Agent.Info | undefined, permission: string): PermissionNext.Action | undefined {

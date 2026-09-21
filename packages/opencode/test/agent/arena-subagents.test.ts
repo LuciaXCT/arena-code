@@ -1,9 +1,21 @@
-import { expect, test } from "bun:test"
+import { afterAll, beforeAll, expect, test } from "bun:test"
 import { Instance } from "../../src/project/instance"
 import { Agent } from "../../src/agent/agent"
 import { filterSubagents } from "../../src/tool/task"
 import { PermissionNext } from "../../src/permission/next"
 import path from "path"
+
+// Stock opencode expectations: force Arena mode off even when another
+// test file leaks ARENA=1 into this process.
+const originalArena = process.env.ARENA
+
+beforeAll(() => {
+  delete process.env.ARENA
+})
+
+afterAll(() => {
+  if (originalArena !== undefined) process.env.ARENA = originalArena
+})
 
 const projectRoot = path.join(__dirname, "../..")
 
