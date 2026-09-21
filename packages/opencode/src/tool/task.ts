@@ -11,6 +11,7 @@ import { iife } from "@/util/iife"
 import { defer } from "@/util/defer"
 import { Config } from "../config/config"
 import { PermissionNext } from "@/permission/next"
+import { Provider } from "../provider/provider"
 
 export { DESCRIPTION as TASK_DESCRIPTION }
 
@@ -34,6 +35,7 @@ export const TaskTool = Tool.define("task", async () => {
       subagent_type: z.string().describe("The type of specialized agent to use for this task"),
       session_id: z.string().describe("Existing Task session to continue").optional(),
       command: z.string().describe("The command that triggered this task").optional(),
+      model: z.string().describe("Model for the subagent in provider/model format (e.g. anthropic/claude-sonnet-4). Defaults to the subagent's configured model, then the current session model.").optional(),
     }),
     async execute(params, ctx) {
       const config = await Config.get()
@@ -121,10 +123,12 @@ export const TaskTool = Tool.define("task", async () => {
         })
       })
 
-      const model = agent.model ?? {
-        modelID: msg.info.modelID,
-        providerID: msg.info.providerID,
-      }
+      const model = params.model
+        ? Provider.parseModel(params.model)
+        : (agent.model ?? {
+            modelID: msg.info.modelID,
+            providerID: msg.info.providerID,
+          })
 
       function cancel() {
         SessionPrompt.cancel(session.id)
