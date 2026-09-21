@@ -80,7 +80,8 @@ export function toOpenCodeConfig(config: ArenaConfig): Record<string, unknown> {
     const provider = value as ArenaProviderConfig
     const models = Object.fromEntries(
       Object.entries(provider.models ?? {}).map(([modelID, model]) => {
-        const item = typeof model === "string" ? { id: modelID, name: model } : { id: model.model ?? modelID, name: model.name }
+        const item =
+          typeof model === "string" ? { id: modelID, name: model } : { id: model.model ?? modelID, name: model.name }
         return [modelID, item]
       }),
     )
@@ -113,7 +114,12 @@ export function resolveApiKey(config: ArenaConfig): string | undefined {
     if (envKey) return process.env[envKey]
   }
   // Fallback: try common keys
-  return process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY
+  return (
+    process.env.OPENROUTER_API_KEY ||
+    process.env.OPENAI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.GEMINI_API_KEY
+  )
 }
 
 export function getConfigSearchPaths(): string[] {
