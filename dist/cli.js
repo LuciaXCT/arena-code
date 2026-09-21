@@ -1,13 +1,118 @@
 #!/usr/bin/env node
+import { createRequire } from "node:module";
+var __create = Object.create;
+var __getProtoOf = Object.getPrototypeOf;
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __toESM = (mod, isNodeMode, target) => {
+  target = mod != null ? __create(__getProtoOf(mod)) : {};
+  const to = isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target;
+  for (let key of __getOwnPropNames(mod))
+    if (!__hasOwnProp.call(to, key))
+      __defProp(to, key, {
+        get: () => mod[key],
+        enumerable: true
+      });
+  return to;
+};
+var __require = /* @__PURE__ */ createRequire(import.meta.url);
 
 // src/cli.ts
 import childProcess from "node:child_process";
-import path from "node:path";
-import fs from "node:fs";
+import path2 from "node:path";
+import fs2 from "node:fs";
 import { fileURLToPath } from "node:url";
-var __dirname2 = path.dirname(fileURLToPath(import.meta.url));
+
+// src/config.ts
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
+var CONFIG_PATH = path.join(os.homedir(), ".config", "arena", "config.yaml");
+var CONFIG_PATH_ALT = path.join(os.homedir(), ".config", "arena", "config.yml");
+function parseYaml(content) {
+  const result = {};
+  const lines = content.split(`
+`);
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#"))
+      continue;
+    const colon = line.indexOf(":");
+    if (colon === -1)
+      continue;
+    const key = line.slice(0, colon).trim();
+    let value = line.slice(colon + 1).trim();
+    if (value.startsWith('"') && value.endsWith('"') || value.startsWith("'") && value.endsWith("'")) {
+      value = value.slice(1, -1);
+    }
+    if (key && value)
+      result[key] = value;
+  }
+  return result;
+}
+async function loadConfig() {
+  const candidates = [CONFIG_PATH, CONFIG_PATH_ALT];
+  if (process.env.ARENA_CONFIG)
+    candidates.unshift(process.env.ARENA_CONFIG);
+  for (const p of candidates) {
+    try {
+      if (!fs.existsSync(p))
+        continue;
+      const content = await fs.promises.readFile(p, "utf8");
+      if (p.endsWith(".yaml") || p.endsWith(".yml")) {
+        try {
+          const yaml = await import("yaml");
+          const parsed = yaml.parse(content);
+          return { config: parsed ?? {}, path: p };
+        } catch {
+          return { config: parseYaml(content), path: p };
+        }
+      }
+      return { config: JSON.parse(content), path: p };
+    } catch {
+      continue;
+    }
+  }
+  return { config: {}, path: null };
+}
+function toOpenCodeConfig(config) {
+  const providers = {};
+  const selected = config.provider ? {
+    [config.provider]: {
+      ...config.apiKeyEnv ? { env: [config.apiKeyEnv] } : {},
+      ...config.model ? { models: { [config.model]: { id: config.model, name: config.model } } } : {}
+    }
+  } : {};
+  for (const [id, value] of Object.entries(config.providers ?? {})) {
+    const provider = value;
+    const models = Object.fromEntries(Object.entries(provider.models ?? {}).map(([modelID, model]) => {
+      const item = typeof model === "string" ? { id: modelID, name: model } : { id: model.model ?? modelID, name: model.name };
+      return [modelID, item];
+    }));
+    providers[id] = {
+      ...provider.apiKeyEnv ? { env: [provider.apiKeyEnv] } : {},
+      ...provider.baseURL ? { api: provider.baseURL, options: { baseURL: provider.baseURL } } : {},
+      ...Object.keys(models).length ? { models } : {}
+    };
+  }
+  const result = { provider: { ...selected, ...providers } };
+  if (config.provider && config.model)
+    result.model = `${config.provider}/${config.model}`;
+  return result;
+}
+
+// src/modes.ts
+var ARENA_AGENT_TYPES = ["Battle", "DeepMode", "Side by side", "Direct"];
+
+// src/cli.ts
+var __dirname2 = path2.dirname(fileURLToPath(import.meta.url));
 process.env.ARENA = "1";
 var projectDirectory = process.cwd();
+var arenaConfig = await loadConfig();
+process.env.OPENCODE_CONFIG_CONTENT = JSON.stringify(toOpenCodeConfig(arenaConfig.config));
+delete process.env.OPENCODE_CONFIG;
+process.env.ARENA_AGENT_TYPES = JSON.stringify(ARENA_AGENT_TYPES);
 var args = process.argv.slice(2);
 var auto = args.includes("--auto");
 var json = args.includes("--json");
@@ -35,13 +140,7 @@ var [requestedProvider, requestedModel] = model?.includes("/") ? model.split(/\/
 var localProvider = requestedProvider === "ollama" || requestedProvider === "lmstudio" ? requestedProvider : undefined;
 var bareModel = localProvider ? requestedModel : undefined;
 if (localProvider && bareModel) {
-  const currentConfig = (() => {
-    try {
-      return JSON.parse(process.env.OPENCODE_CONFIG_CONTENT ?? "{}");
-    } catch {
-      return {};
-    }
-  })();
+  const currentConfig = toOpenCodeConfig(arenaConfig.config);
   currentConfig.model = `${localProvider}/${bareModel}`;
   currentConfig.provider = {
     ...currentConfig.provider ?? {},
@@ -182,16 +281,16 @@ function trySpawn(cmd, spawnArgs, opts) {
   }
   process.exit(typeof result.status === "number" ? result.status : 1);
 }
-if (process.env.OPENCODE_BIN_PATH && fs.existsSync(process.env.OPENCODE_BIN_PATH)) {
+if (process.env.OPENCODE_BIN_PATH && fs2.existsSync(process.env.OPENCODE_BIN_PATH)) {
   trySpawn(process.env.OPENCODE_BIN_PATH, forwarded, { env: process.env });
 }
-var siblingBin = path.join(__dirname2, process.platform === "win32" ? "opencode.exe" : "opencode");
-if (fs.existsSync(siblingBin)) {
+var siblingBin = path2.join(__dirname2, process.platform === "win32" ? "opencode.exe" : "opencode");
+if (fs2.existsSync(siblingBin)) {
   trySpawn(siblingBin, forwarded, { env: process.env });
 }
-var sourceCheckout = path.join(__dirname2, "../packages/opencode/src/index.ts");
-var opencodeDir = path.join(__dirname2, "../packages/opencode");
-if (fs.existsSync(sourceCheckout)) {
+var sourceCheckout = path2.join(__dirname2, "../packages/opencode/src/index.ts");
+var opencodeDir = path2.join(__dirname2, "../packages/opencode");
+if (fs2.existsSync(sourceCheckout)) {
   const bun = findBun();
   if (bun) {
     trySpawn(bun, ["run", "--conditions=browser", sourceCheckout, ...forwarded], {
