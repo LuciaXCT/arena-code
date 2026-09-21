@@ -9,7 +9,7 @@
 
 Arena is an AI-powered coding agent that runs locally in your repository. It understands your codebase, edits files, runs commands, and iterates with you — directly from the terminal.
 
-**Package:** `@pawbxj/arena-cli` • **Command:** `arena` • **Version:** `0.0.5-dev` • **Author:** Pawbxj
+**Package:** `@pawbxj/arena-cli` • **Command:** `arena` • **Version:** `0.0.6-dev` • **Author:** Pawbxj
 
 ---
 
@@ -30,7 +30,7 @@ Arena is an AI-powered coding agent that runs locally in your repository. It und
 npm install -g @pawbxj/arena-cli
 
 # Verify
-arena --version   # 0.0.5-dev
+arena --version   # 0.0.6-dev
 arena --help
 ```
 
@@ -318,7 +318,7 @@ npm run build:binaries
 # -> fills platforms/<os>-<arch>/bin/arena from the opencode matrix build
 
 # Verify
-./dist/cli.js --version  # 0.0.5-dev
+./dist/cli.js --version  # 0.0.6-dev
 ./dist/cli.js --help
 node dist/cli.js "hello"
 ```
@@ -358,7 +358,7 @@ The package is publishable to the npm registry and consumable by both npm and Bu
 # 1. Ensure clean build
 npm run clean
 npm run build
-./dist/cli.js --version  # must be 0.0.5-dev
+./dist/cli.js --version  # must be 0.0.6-dev
 ./dist/cli.js --help
 
 # 2. Verify package contents (dry run)
@@ -368,24 +368,24 @@ npm pack --dry-run
 
 # 3. Optional: create tarball and test install
 npm pack
-# -> pawbxj-arena-cli-0.0.5-dev.tgz
+# -> pawbxj-arena-cli-0.0.6-dev.tgz
 
 # Test with npm
-npm install -g ./pawbxj-arena-cli-0.0.5-dev.tgz
+npm install -g ./pawbxj-arena-cli-0.0.6-dev.tgz
 arena --version
 arena --help
 arena "test task"
 npm uninstall -g @pawbxj/arena-cli
 
 # Test with bun (same tarball)
-bun install -g ./pawbxj-arena-cli-0.0.5-dev.tgz
+bun install -g ./pawbxj-arena-cli-0.0.6-dev.tgz
 arena --version
 bun pm ls -g | grep arena
 bunx @pawbxj/arena-cli --help
 
 # Also test npx/bunx without global install (from the tarball)
-npx --package ./pawbxj-arena-cli-0.0.5-dev.tgz -c "arena --help"
-bunx --package ./pawbxj-arena-cli-0.0.5-dev.tgz arena --help
+npx --package ./pawbxj-arena-cli-0.0.6-dev.tgz -c "arena --help"
+bunx --package ./pawbxj-arena-cli-0.0.6-dev.tgz arena --help
 # After publishing, the same works from the registry:
 # npx --package @pawbxj/arena-cli -c "arena --help"
 # bunx --package @pawbxj/arena-cli arena --help
@@ -426,4 +426,4 @@ MIT — see [LICENSE](LICENSE).
 
 ## Version
 
-`0.0.5-dev` (pre-release, ESM, Node `>=18`, Bun `>=1.0`)
+`0.0.6-dev` (pre-release, ESM, Node `>=18`, Bun `>=1.0`)
