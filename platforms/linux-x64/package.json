@@ -1,0 +1,19 @@
+{
+  "name": "@pawbxj/arena-cli-linux-x64",
+  "version": "0.0.3-dev",
+  "description": "Arena CLI runtime binary for linux-x64. Installed automatically as an optionalDependency of @pawbxj/arena-cli.",
+  "license": "MIT",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

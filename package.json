@@ -3,7 +3,7 @@
   "name": "@pawbxj/arena-cli",
   "version": "0.0.3-dev",
   "description": "A powerful AI coding agent CLI that works directly inside local repositories.",
-  "author": "CodersTeam",
+  "author": "Pawbxj",
   "license": "MIT",
   "type": "module",
   "packageManager": "bun@1.3.5",
@@ -20,6 +20,13 @@
     "README.md",
     "LICENSE"
   ],
+  "optionalDependencies": {
+    "@pawbxj/arena-cli-linux-x64": "0.0.3-dev",
+    "@pawbxj/arena-cli-linux-arm64": "0.0.3-dev",
+    "@pawbxj/arena-cli-darwin-x64": "0.0.3-dev",
+    "@pawbxj/arena-cli-darwin-arm64": "0.0.3-dev",
+    "@pawbxj/arena-cli-win32-x64": "0.0.3-dev"
+  },
   "keywords": [
     "ai",
     "coding-agent",
@@ -48,12 +55,13 @@
   "scripts": {
     "dev": "bun --conditions=browser ./src/cli.ts",
     "build": "bun run build.ts",
+    "build:binaries": "bun run build.ts --matrix",
     "typecheck": "tsc --noEmit --project tsconfig.arena.json",
-    "test": "node dist/cli.js --version && node dist/cli.js --help > /dev/null && echo \"All tests passed: arena --version and --help OK\"",
-    "lint": "prettier --check \"src/**/*.{ts,js,json}\" || echo \"lint check completed\"",
-    "format": "prettier --write \"src/**/*.{ts,js,json}\"",
+    "test": "node --test src/cli.test.ts",
+    "lint": "prettier --check \"src/**/*.{ts,js,json}\" \"build.ts\"",
+    "format": "prettier --write \"src/**/*.{ts,js,json}\" \"build.ts\"",
     "clean": "rm -rf dist *.tgz",
-    "prepack": "bun run build",
+    "prepack": "bun run build --no-binary",
     "pack:dry": "npm pack --dry-run"
   },
   "workspaces": {

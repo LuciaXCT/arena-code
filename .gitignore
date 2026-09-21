@@ -42,3 +42,6 @@ logs/
 # Arena config (local)
 .config/
 arena.local.yaml
+
+# Platform runtime binaries (built by `bun run build --matrix`, published separately)
+platforms/*/bin/
