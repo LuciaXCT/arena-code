@@ -3,6 +3,15 @@ node_modules
 .worktrees
 .sst
 .env
+.env.*
+.env.local
+.env.development.local
+.env.production.local
+*.key
+*.pem
+*.log
+npm-debug.log*
+yarn-debug.log*
 .idea
 .vscode
 *~
@@ -20,7 +29,16 @@ opencode.json
 a.out
 target
 .scripts
+*.tgz
+coverage
+.nyc_output
+.tmp
+.cache
 
 # Local dev files
 opencode-dev
 logs/
+
+# Arena config (local)
+.config/
+arena.local.yaml
