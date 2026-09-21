@@ -6,13 +6,12 @@ import { ConfigMarkdown } from "../config/markdown"
 import { PermissionNext } from "../permission/next"
 
 const parameters = z.object({
-  name: z.string().describe("The skill identifier from available_skills (e.g., 'code-review' or 'category/helper')"),
+  name: z.string().describe("The skill identifier from available_skills (e.g., 'deploy' or 'plugin:deploy')"),
 })
 
 export const SkillTool = Tool.define("skill", async (ctx) => {
-  const skills = await Skill.all()
+  const skills = await Skill.allForModel()
 
-  // Filter skills by agent permissions if agent provided
   const agent = ctx?.agent
   const accessibleSkills = agent
     ? skills.filter((skill) => {
@@ -32,7 +31,7 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
           ...accessibleSkills.flatMap((skill) => [
             `  <skill>`,
             `    <name>${skill.name}</name>`,
-            `    <description>${skill.description}</description>`,
+            `    <description>${Skill.combinedDescription(skill)}</description>`,
             `  </skill>`,
           ]),
           "</available_skills>",
@@ -45,7 +44,7 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
       const skill = await Skill.get(params.name)
 
       if (!skill) {
-        const available = await Skill.all().then((x) => Object.keys(x).join(", "))
+        const available = await Skill.all().then((x) => x.map((s) => s.name).join(", "))
         throw new Error(`Skill "${params.name}" not found. Available skills: ${available || "none"}`)
       }
 
@@ -55,11 +54,9 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
         always: [params.name],
         metadata: {},
       })
-      // Load and parse skill content
       const parsed = await ConfigMarkdown.parse(skill.location)
       const dir = path.dirname(skill.location)
 
-      // Format output similar to plugin pattern
       const output = [`## Skill: ${skill.name}`, "", `**Base directory**: ${dir}`, "", parsed.content.trim()].join("\n")
 
       return {
