@@ -9,7 +9,7 @@
 
 Arena is an AI-powered coding agent that runs locally in your repository. It understands your codebase, edits files, runs commands, and iterates with you — directly from the terminal.
 
-**Package:** `@pawbxj/arena-cli` • **Command:** `arena` • **Version:** `0.0.1-dev` • **Author:** CodersTeam
+**Package:** `@pawbxj/arena-cli` • **Command:** `arena` • **Version:** `0.0.3-dev` • **Author:** Pawbxj
 
 ---
 
@@ -30,7 +30,7 @@ Arena is an AI-powered coding agent that runs locally in your repository. It und
 npm install -g @pawbxj/arena-cli
 
 # Verify
-arena --version   # 0.0.1-dev
+arena --version   # 0.0.3-dev
 arena --help
 ```
 
@@ -295,14 +295,19 @@ bun run build
 # -> runs: bun run build.ts
 
 # The build:
-# - removes dist/
-# - bundles src/cli.ts + src/config.ts with Bun.build (ESM, target node)
+# - syncs platform package versions with the root version
+# - bundles src/cli.ts (+ config, modes) with Bun.build (ESM, target node)
 # - externalizes `yaml` (installed as dependency)
-# - prepends #!/usr/bin/env node and chmod +x
-# - produces dist/cli.js
+# - injects ARENA_VERSION from package.json, prepends #!/usr/bin/env node, chmod +x
+# - produces dist/cli.js (+ dist/arena runtime binary unless --no-binary)
+
+# Runtime matrix (one binary per OS/arch, published as optionalDependencies):
+npm run build:binaries
+# -> runs: bun run build.ts --matrix
+# -> fills platforms/<os>-<arch>/bin/arena from the opencode matrix build
 
 # Verify
-./dist/cli.js --version  # 0.0.1-dev
+./dist/cli.js --version  # 0.0.3-dev
 ./dist/cli.js --help
 node dist/cli.js "hello"
 ```
@@ -317,10 +322,8 @@ npm run typecheck
 ## Testing
 
 ```bash
-# Run tests
+# Run tests (Node built-in runner, no runtime binary needed)
 npm test
-# or
-bun test
 
 # Lint
 npm run lint
@@ -338,13 +341,13 @@ OPENROUTER_API_KEY=dummy ./dist/cli.js --model openrouter/qwen/qwen3-coder "test
 
 ## Publishing Instructions
 
-The package is publishable to the npm registry and consumable by both npm and Bun. Do **not** publish automatically — CodersTeam publishes manually.
+The package is publishable to the npm registry and consumable by both npm and Bun. Do **not** publish automatically — Pawbxj publishes manually.
 
 ```bash
 # 1. Ensure clean build
 npm run clean
 npm run build
-./dist/cli.js --version  # must be 0.0.1-dev
+./dist/cli.js --version  # must be 0.0.3-dev
 ./dist/cli.js --help
 
 # 2. Verify package contents (dry run)
@@ -354,24 +357,27 @@ npm pack --dry-run
 
 # 3. Optional: create tarball and test install
 npm pack
-# -> codersteam-arena-0.0.1-dev.tgz
+# -> pawbxj-arena-cli-0.0.3-dev.tgz
 
 # Test with npm
-npm install -g ./codersteam-arena-0.0.1-dev.tgz
+npm install -g ./pawbxj-arena-cli-0.0.3-dev.tgz
 arena --version
 arena --help
 arena "test task"
 npm uninstall -g @pawbxj/arena-cli
 
 # Test with bun (same tarball)
-bun install -g ./codersteam-arena-0.0.1-dev.tgz
+bun install -g ./pawbxj-arena-cli-0.0.3-dev.tgz
 arena --version
 bun pm ls -g | grep arena
 bunx @pawbxj/arena-cli --help
 
-# Also test npx/bunx without global install
-npx ./codersteam-arena-0.0.1-dev.tgz --help
-bunx ./codersteam-arena-0.0.1-dev.tgz --help
+# Also test npx/bunx without global install (from the tarball)
+npx --package ./pawbxj-arena-cli-0.0.3-dev.tgz -c "arena --help"
+bunx --package ./pawbxj-arena-cli-0.0.3-dev.tgz arena --help
+# After publishing, the same works from the registry:
+# npx --package @pawbxj/arena-cli -c "arena --help"
+# bunx --package @pawbxj/arena-cli arena --help
 
 # 4. Publish (maintainer only)
 npm publish --access public
@@ -405,8 +411,8 @@ MIT — see [LICENSE](LICENSE).
 
 ## Author
 
-**CodersTeam** — [@pawbxj/arena-cli](https://github.com/k1ruuuu/arena-cli)
+**Pawbxj** — [@pawbxj/arena-cli](https://github.com/k1ruuuu/arena-cli)
 
 ## Version
 
-`0.0.1-dev` (pre-release, ESM, Node `>=18`, Bun `>=1.0`)
+`0.0.3-dev` (pre-release, ESM, Node `>=18`, Bun `>=1.0`)
