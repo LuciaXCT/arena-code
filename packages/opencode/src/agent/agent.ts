@@ -10,6 +10,7 @@ import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
+import PROMPT_DEEPMODE from "./prompt/deepmode.txt"
 import { PermissionNext } from "@/permission/next"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { ConfigMarkdown } from "../config/markdown"
@@ -68,6 +69,19 @@ export namespace Agent {
         mode: "primary",
         native: true,
       },
+      ...(Flag.ARENA
+        ? {
+            DeepMode: {
+              name: "DeepMode",
+              description: "Advanced orchestrator for complex, multi-stage software engineering tasks.",
+              options: {},
+              permission: PermissionNext.merge(defaults, user),
+              mode: "primary" as const,
+              native: true,
+              prompt: PROMPT_DEEPMODE,
+            },
+          }
+        : {}),
       plan: {
         name: "plan",
         options: {},

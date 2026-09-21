@@ -39,6 +39,7 @@ Usage:
 Commands:
   run            run with a message (default)
   battle         blind side-by-side battle between two models
+  side-by-side   run one prompt on two named models, show both answers
   leaderboard    show local model Elo rankings
   plugin         manage Arena plugins
   models         list available models
@@ -170,6 +171,7 @@ const SUBCOMMANDS = new Set([
   "battle",
   "leaderboard",
   "plugin",
+  "side-by-side",
 ])
 
 const valueOptions = new Set([

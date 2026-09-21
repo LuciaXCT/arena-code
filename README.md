@@ -101,6 +101,15 @@ arena --config ./arena.yaml "migrate the database schema"
 
 **Working directory:** Arena runs in the current directory (`process.cwd()`). Run it from your repository root.
 
+## Interaction Modes
+
+| Mode | How to use | Behavior |
+|------|-----------|----------|
+| `Direct` | `arena` / `arena "task"` | Normal single-model session (default) |
+| `Battle` | `arena battle "prompt"` | Blind test: two models answer, identities hidden until you vote; vote updates local Elo (`arena leaderboard`) |
+| `Side by side` | `arena side-by-side "prompt"` | Same prompt on two named models, both answers shown labeled, no vote recorded |
+| `DeepMode` | `arena --agent DeepMode "task"` or switch agent in TUI | Orchestrator agent for complex multi-stage work: plans first, verifies after |
+
 ## Configuration
 
 Arena loads configuration from:

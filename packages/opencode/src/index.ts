@@ -28,6 +28,9 @@ import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 import { PluginCommand } from "./cli/cmd/plugin"
+import { BattleCommand } from "./cli/cmd/battle"
+import { LeaderboardCommand } from "./cli/cmd/leaderboard"
+import { SideBySideCommand } from "./cli/cmd/sidebyside"
 import { Flag } from "./flag/flag"
 
 process.on("unhandledRejection", (e) => {
@@ -116,6 +119,9 @@ const cli = yargs(hideBin(process.argv))
 
 // Arena-only commands stay out of upstream opencode help.
 if (Flag.ARENA) cli.command(PluginCommand)
+if (Flag.ARENA) cli.command(BattleCommand)
+if (Flag.ARENA) cli.command(LeaderboardCommand)
+if (Flag.ARENA) cli.command(SideBySideCommand)
 
 try {
   await cli.parse()
