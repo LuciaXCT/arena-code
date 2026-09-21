@@ -182,6 +182,40 @@ export GEMINI_API_KEY="AIza..."
 
 You can also set a generic key for any provider by defining `apiKeyEnv` in `config.yaml` to point at any env var (e.g. `MY_TEAM_KEY`).
 
+## Skills (Claude Code compatible)
+
+Arena loads `SKILL.md` skills exactly like Claude Code. The model auto-invokes them from `description`, or you invoke manually with `/skill-name`.
+
+Locations (default is global):
+
+- Global: `~/.config/arena/skills/<name>/SKILL.md`
+- Project: `.arena/skills/<name>/SKILL.md`
+- Compat: `~/.claude/skills/`, `.claude/skills/`, `~/.agents/skills/`, `.agents/skills/`
+- Plugin skills (reserved): `.arena/plugins/<plugin>/skills/<name>/SKILL.md` as `<plugin>:<name>`
+
+Minimal skill:
+
+```md
+---
+name: deploy
+description: Deploy the app. Use when asked to deploy, release, or ship.
+argument-hint: "[env]"
+arguments: target
+---
+
+# Deploy
+
+Deploy `$target` with `$ARGUMENTS`. Scripts live in `${CLAUDE_SKILL_DIR}/scripts/`.
+```
+
+Notes:
+
+- Directory name is the `/command`. Frontmatter `name` is the display label (for plugin skills it sets the last segment of `plugin:skill`).
+- `description` + `when_to_use` (max 1536 chars) is the routing signal. Put the use case first.
+- `$name` maps to positional `$1`, `$2` from `arguments`. `$ARGUMENTS`, `$1`, and `!`command`` work like slash commands. `${CLAUDE_SKILL_DIR}` and `${ARENA_SKILL_DIR}` resolve to the skill folder.
+- `user-invocable: false` hides the skill from the `/` menu but keeps it model-invoked. `disable-model-invocation: true` hides it from the model.
+- Only `name` + `description` stay in context. Body and `references/`, `examples/`, `scripts/` load on demand, so keep `SKILL.md` lean and reference supporting files explicitly.
+
 ## Development Setup
 
 Requirements: Node `>=18`, Bun `>=1.0`.
