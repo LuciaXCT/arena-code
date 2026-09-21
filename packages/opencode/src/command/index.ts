@@ -9,6 +9,8 @@ import PROMPT_REVIEW from "./template/review.txt"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { ConfigMarkdown } from "../config/markdown"
+import { ArenaPlugin } from "../arena/plugin"
+import { Flag } from "../flag/flag"
 
 export namespace Command {
   export const Event = {
@@ -151,6 +153,32 @@ export namespace Command {
           })
         },
         hints: (skill.args ?? []).map((_, i) => `$${i + 1}`),
+      }
+    }
+
+    if (Flag.ARENA) {
+      const parts = await ArenaPlugin.allComponents().catch(() => undefined)
+      for (const item of parts?.commands ?? []) {
+        if (result[item.name]) continue
+        const file = item.file
+        result[item.name] = {
+          name: item.name,
+          description: `Plugin command from ${item.plugin}`,
+          get template() {
+            return new Promise<string>(async (resolve) => {
+              const parsed = await ConfigMarkdown.parse(file).catch(() => undefined)
+              const dir = path.dirname(file)
+              const body = (parsed?.content?.trim() ?? "")
+                .replaceAll("${CLAUDE_SKILL_DIR}", dir)
+                .replaceAll("${ARENA_SKILL_DIR}", dir)
+              if (typeof parsed?.data?.description === "string" && parsed.data.description.trim()) {
+                result[item.name].description = parsed.data.description.trim()
+              }
+              resolve(body)
+            })
+          },
+          hints: [],
+        }
       }
     }
 

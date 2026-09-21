@@ -12,6 +12,9 @@ import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { PermissionNext } from "@/permission/next"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
+import { ConfigMarkdown } from "../config/markdown"
+import { ArenaPlugin } from "../arena/plugin"
+import { Flag } from "../flag/flag"
 
 export namespace Agent {
   export const Info = z
@@ -192,6 +195,24 @@ export namespace Agent {
       item.steps = value.steps ?? item.steps
       item.options = mergeDeep(item.options, value.options ?? {})
       item.permission = PermissionNext.merge(item.permission, PermissionNext.fromConfig(value.permission ?? {}))
+    }
+
+    if (Flag.ARENA) {
+      const parts = await ArenaPlugin.allComponents().catch(() => undefined)
+      for (const item of parts?.agents ?? []) {
+        if (result[item.name]) continue
+        const parsed = await ConfigMarkdown.parse(item.file).catch(() => undefined)
+        if (!parsed) continue
+        result[item.name] = {
+          name: item.name,
+          description: typeof parsed.data?.description === "string" ? parsed.data.description : `Plugin agent from ${item.plugin}`,
+          mode: "all",
+          permission: PermissionNext.merge(defaults, user),
+          options: {},
+          native: false,
+          prompt: parsed.content.trim(),
+        }
+      }
     }
     return result
   })

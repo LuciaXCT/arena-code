@@ -16,3 +16,4 @@ Object.defineProperty(Arena, "enabled", {
 
 export { ArenaBattle } from "./battle"
 export { ArenaLeaderboard } from "./leaderboard"
+export { ArenaPlugin } from "./plugin"

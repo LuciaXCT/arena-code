@@ -8,6 +8,8 @@ import { Log } from "../util/log"
 import { Global } from "@/global"
 import { Filesystem } from "@/util/filesystem"
 import { exists } from "fs/promises"
+import { ArenaPlugin } from "../arena/plugin"
+import { Flag } from "../flag/flag"
 
 export namespace Skill {
   const log = Log.create({ service: "skill" })
@@ -181,14 +183,18 @@ export namespace Skill {
     }
 
     // Global first (default), project overrides on duplicate.
+    const scanBoth = async (cwd: string, source: Info["source"]) => {
+      await scanGlob(cwd, CLAUDE_SKILL_GLOB, source)
+      await scanGlob(cwd, OPENCODE_SKILL_GLOB, source)
+    }
     const globalArenaConfig = path.join(Global.Path.config, "skills")
     const globalArenaHome = path.join(Global.Path.home, ".config", "arena", "skills")
     const globalClaude = path.join(Global.Path.home, ".claude", "skills")
     const globalAgents = path.join(Global.Path.home, ".agents", "skills")
-    await scanGlob(path.dirname(globalArenaConfig), CLAUDE_SKILL_GLOB, "global")
-    if (globalArenaHome !== globalArenaConfig) await scanGlob(path.dirname(globalArenaHome), CLAUDE_SKILL_GLOB, "global")
-    await scanGlob(path.dirname(globalClaude), CLAUDE_SKILL_GLOB, "global")
-    await scanGlob(path.dirname(globalAgents), CLAUDE_SKILL_GLOB, "global")
+    await scanBoth(path.dirname(globalArenaConfig), "global")
+    if (globalArenaHome !== globalArenaConfig) await scanBoth(path.dirname(globalArenaHome), "global")
+    await scanBoth(path.dirname(globalClaude), "global")
+    await scanBoth(path.dirname(globalAgents), "global")
 
     // Project up-tree, flag-independent for backward compat.
     for (const target of [".arena", ".opencode", ".claude", ".agents"]) {
@@ -202,7 +208,12 @@ export namespace Skill {
     }
 
     // Config directories plus plugin reservation.
-    for (const dir of await Config.directories()) {
+    if (Flag.ARENA) {
+      const parts = await ArenaPlugin.allComponents().catch(() => undefined)
+      if (parts) {
+        for (const skill of parts.skills) await addSkill(skill.file, "plugin", skill.plugin)
+      }
+    } else for (const dir of await Config.directories()) {
       if (!(await exists(dir).catch(() => false))) continue
       const legacy = await Array.fromAsync(
         OPENCODE_SKILL_GLOB.scan({ cwd: dir, absolute: true, onlyFiles: true, followSymlinks: true, dot: true }),
