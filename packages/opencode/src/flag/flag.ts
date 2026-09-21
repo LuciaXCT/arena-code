@@ -1,5 +1,10 @@
 export namespace Flag {
   export const ARENA = truthy("ARENA")
+  // Live check (unlike the ARENA const above) so tests and sessions can
+  // toggle Arena mode per case without module reloads.
+  export function isArena() {
+    return truthy("ARENA")
+  }
   export const OPENCODE_AUTO_SHARE = truthy("OPENCODE_AUTO_SHARE")
   export const OPENCODE_GIT_BASH_PATH = process.env["OPENCODE_GIT_BASH_PATH"]
   export const OPENCODE_CONFIG = process.env["OPENCODE_CONFIG"]

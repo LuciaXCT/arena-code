@@ -156,7 +156,7 @@ export namespace Command {
       }
     }
 
-    if (Flag.ARENA) {
+    if (Flag.isArena()) {
       const parts = await ArenaPlugin.allComponents().catch(() => undefined)
       for (const item of parts?.commands ?? []) {
         if (result[item.name]) continue

@@ -208,7 +208,7 @@ export namespace Skill {
     }
 
     // Config directories plus plugin reservation.
-    if (Flag.ARENA) {
+    if (Flag.isArena()) {
       const parts = await ArenaPlugin.allComponents().catch(() => undefined)
       if (parts) {
         for (const skill of parts.skills) await addSkill(skill.file, "plugin", skill.plugin)
