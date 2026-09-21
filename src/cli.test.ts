@@ -11,10 +11,10 @@ function run(...args: string[]) {
 }
 
 describe("Arena CLI wrapper", () => {
-  it("reports version 0.0.3-dev without a runtime", () => {
+  it("reports version 0.0.4-dev without a runtime", () => {
     const result = run("--version")
     assert.equal(result.status, 0)
-    assert.equal(result.stdout.trim(), "0.0.3-dev")
+    assert.equal(result.stdout.trim(), "0.0.4-dev")
   })
 
   it("shows help without a runtime", () => {
