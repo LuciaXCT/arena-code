@@ -11,6 +11,9 @@ import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import PROMPT_DEEPMODE from "./prompt/deepmode.txt"
+import PROMPT_DIRECT from "./prompt/direct.txt"
+import PROMPT_BATTLE from "./prompt/battle.txt"
+import PROMPT_SIDEBYSIDE from "./prompt/sidebyside.txt"
 import { PermissionNext } from "@/permission/next"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { ConfigMarkdown } from "../config/markdown"
@@ -18,6 +21,15 @@ import { ArenaPlugin } from "../arena/plugin"
 import { Flag } from "../flag/flag"
 
 export namespace Agent {
+  // Live check (not the Flag.ARENA const) so tests can toggle modes per case.
+  const arena = () => Flag.isArena()
+
+  export const ARENA_ROSTER = ["Battle", "DeepMode", "Side by side", "Direct"] as const
+  // Native Build/Plan are retired in Arena mode (the roster replaces them).
+  // Custom file agents are never retired, even when named the same.
+  function retired(info: Info) {
+    return info.native && (info.name === "build" || info.name === "plan")
+  }
   export const Info = z
     .object({
       name: z.string(),
@@ -69,8 +81,30 @@ export namespace Agent {
         mode: "primary",
         native: true,
       },
-      ...(Flag.ARENA
+      ...(arena()
         ? {
+            Battle: {
+              name: "Battle",
+              description: "Blind side-by-side battle between two models with voting and Elo ranking.",
+              options: {},
+              permission: PermissionNext.merge(
+                defaults,
+                PermissionNext.fromConfig({
+                  "*": "deny",
+                  task: "allow",
+                  arena_vote: "allow",
+                  skill: "allow",
+                  read: "allow",
+                  glob: "allow",
+                  grep: "allow",
+                  list: "allow",
+                }),
+                user,
+              ),
+              mode: "primary" as const,
+              native: true,
+              prompt: PROMPT_BATTLE,
+            },
             DeepMode: {
               name: "DeepMode",
               description: "Advanced orchestrator for complex, multi-stage software engineering tasks.",
@@ -79,6 +113,36 @@ export namespace Agent {
               mode: "primary" as const,
               native: true,
               prompt: PROMPT_DEEPMODE,
+            },
+            "Side by side": {
+              name: "Side by side",
+              description: "Run the same prompt on two named models and show both answers labeled.",
+              options: {},
+              permission: PermissionNext.merge(
+                defaults,
+                PermissionNext.fromConfig({
+                  "*": "deny",
+                  task: "allow",
+                  skill: "allow",
+                  read: "allow",
+                  glob: "allow",
+                  grep: "allow",
+                  list: "allow",
+                }),
+                user,
+              ),
+              mode: "primary" as const,
+              native: true,
+              prompt: PROMPT_SIDEBYSIDE,
+            },
+            Direct: {
+              name: "Direct",
+              description: "Direct single-model chat and coding.",
+              options: {},
+              permission: PermissionNext.merge(defaults, user),
+              mode: "primary" as const,
+              native: true,
+              prompt: PROMPT_DIRECT,
             },
           }
         : {}),
@@ -211,7 +275,7 @@ export namespace Agent {
       item.permission = PermissionNext.merge(item.permission, PermissionNext.fromConfig(value.permission ?? {}))
     }
 
-    if (Flag.ARENA) {
+    if (arena()) {
       const parts = await ArenaPlugin.allComponents().catch(() => undefined)
       for (const item of parts?.agents ?? []) {
         if (result[item.name]) continue
@@ -232,20 +296,45 @@ export namespace Agent {
   })
 
   export async function get(agent: string) {
-    return state().then((x) => x[agent])
+    return state().then((x) => {
+      const info = x[agent]
+      if (info && arena() && retired(info)) {
+        throw new Error(`Agent "${agent}" is not available in Arena mode. Use Battle, DeepMode, Side by side, or Direct.`)
+      }
+      return info
+    })
   }
 
   export async function list() {
     const cfg = await Config.get()
-    return pipe(
-      await state(),
-      values(),
-      sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"]),
+    const all = await state()
+    if (!arena()) {
+      return pipe(
+        all,
+        values(),
+        sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"]),
+      )
+    }
+    // Arena roster first in arena.ai order, then user custom agents.
+    // Native build/plan are retired in Arena mode; file agents stay visible.
+    const ordered = ARENA_ROSTER.map((name) => all[name]).filter((x) => x !== undefined)
+    const customs = values(all).filter(
+      (x) => !ARENA_ROSTER.includes(x.name as (typeof ARENA_ROSTER)[number]) && !retired(x),
     )
+    return [
+      ...ordered,
+      ...sortBy(
+        customs,
+        [(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"],
+      ),
+    ]
   }
 
   export async function defaultAgent() {
-    return state().then((x) => Object.keys(x)[0])
+    return state().then((x) => {
+      if (arena() && x["Direct"]) return "Direct"
+      return Object.keys(x)[0]
+    })
   }
 
   export async function generate(input: { description: string; model?: { providerID: string; modelID: string } }) {

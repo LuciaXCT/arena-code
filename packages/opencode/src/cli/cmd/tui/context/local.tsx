@@ -12,6 +12,7 @@ import { Provider } from "@/provider/provider"
 import { useArgs } from "./args"
 import { useSDK } from "./sdk"
 import { RGBA } from "@opentui/core"
+import { Flag } from "@/flag/flag"
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
@@ -38,7 +39,11 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const [agentStore, setAgentStore] = createStore<{
         current: string
       }>({
-        current: agents()[0].name,
+        // Arena opens on Direct; anywhere else keeps the first agent.
+        current: iife(() => {
+          if (Flag.isArena() && agents().some((x) => x.name === "Direct")) return "Direct"
+          return agents()[0].name
+        }),
       })
       const { theme } = useTheme()
       const colors = createMemo(() => [
