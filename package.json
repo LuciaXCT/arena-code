@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@pawbxj/arena-cli",
-  "version": "0.0.9-dev",
+  "version": "0.0.10-dev",
   "description": "A powerful AI coding agent CLI that works directly inside local repositories.",
   "author": "Pawbxj",
   "license": "MIT",
@@ -21,11 +21,11 @@
     "LICENSE"
   ],
   "optionalDependencies": {
-    "@pawbxj/arena-cli-linux-x64": "0.0.9-dev",
-    "@pawbxj/arena-cli-linux-arm64": "0.0.9-dev",
-    "@pawbxj/arena-cli-darwin-x64": "0.0.9-dev",
-    "@pawbxj/arena-cli-darwin-arm64": "0.0.9-dev",
-    "@pawbxj/arena-cli-win32-x64": "0.0.9-dev"
+    "@pawbxj/arena-cli-linux-x64": "0.0.10-dev",
+    "@pawbxj/arena-cli-linux-arm64": "0.0.10-dev",
+    "@pawbxj/arena-cli-darwin-x64": "0.0.10-dev",
+    "@pawbxj/arena-cli-darwin-arm64": "0.0.10-dev",
+    "@pawbxj/arena-cli-win32-x64": "0.0.10-dev"
   },
   "keywords": [
     "ai",

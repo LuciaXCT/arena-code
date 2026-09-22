@@ -1,6 +1,6 @@
 {
   "name": "@pawbxj/arena-cli-win32-x64",
-  "version": "0.0.9-dev",
+  "version": "0.0.10-dev",
   "description": "Arena CLI runtime binary for win32-x64. Installed automatically as an optionalDependency of @pawbxj/arena-cli.",
   "license": "MIT",
   "os": [
