@@ -177,13 +177,22 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
   }
 
   if (method !== "curl" && method !== "unknown") {
-    const cmds: Record<string, string[]> = {
-      npm: ["npm", "uninstall", "-g", "opencode-ai"],
-      pnpm: ["pnpm", "uninstall", "-g", "opencode-ai"],
-      bun: ["bun", "remove", "-g", "opencode-ai"],
-      yarn: ["yarn", "global", "remove", "opencode-ai"],
-      brew: ["brew", "uninstall", "opencode"],
-    }
+    const arena = Flag.isArena()
+    const cmds: Record<string, string[]> = arena
+      ? {
+          npm: ["npm", "uninstall", "-g", "@pawbxj/arena-cli"],
+          pnpm: ["pnpm", "uninstall", "-g", "@pawbxj/arena-cli"],
+          bun: ["bun", "remove", "-g", "@pawbxj/arena-cli"],
+          yarn: ["yarn", "global", "remove", "@pawbxj/arena-cli"],
+          brew: ["brew", "uninstall", "arena"],
+        }
+      : {
+          npm: ["npm", "uninstall", "-g", "opencode-ai"],
+          pnpm: ["pnpm", "uninstall", "-g", "opencode-ai"],
+          bun: ["bun", "remove", "-g", "opencode-ai"],
+          yarn: ["yarn", "global", "remove", "opencode-ai"],
+          brew: ["brew", "uninstall", "opencode"],
+        }
 
     const cmd = cmds[method]
     if (cmd) {
@@ -205,7 +214,7 @@ async function executeUninstall(method: Installation.Method, targets: RemovalTar
     prompts.log.info(`  rm "${targets.binary}"`)
 
     const binDir = path.dirname(targets.binary)
-    if (binDir.includes(".opencode")) {
+    if (binDir.includes(Flag.isArena() ? ".arena" : ".opencode")) {
       prompts.log.info(`  rmdir "${binDir}" 2>/dev/null`)
     }
   }
@@ -258,7 +267,9 @@ async function getShellConfigFile(): Promise<string | null> {
     const content = await Bun.file(file)
       .text()
       .catch(() => "")
-    if (content.includes("# opencode") || content.includes(".opencode/bin")) {
+    const marker = Flag.isArena() ? "# arena" : "# opencode"
+    const bindir = Flag.isArena() ? ".arena/bin" : ".opencode/bin"
+    if (content.includes(marker) || content.includes(bindir)) {
       return file
     }
   }
@@ -272,25 +283,27 @@ async function cleanShellConfig(file: string) {
 
   const filtered: string[] = []
   let skip = false
+  const marker = Flag.isArena() ? "# arena" : "# opencode"
+  const bindir = Flag.isArena() ? ".arena/bin" : ".opencode/bin"
 
   for (const line of lines) {
     const trimmed = line.trim()
 
-    if (trimmed === "# opencode") {
+    if (trimmed === marker) {
       skip = true
       continue
     }
 
     if (skip) {
       skip = false
-      if (trimmed.includes(".opencode/bin") || trimmed.includes("fish_add_path")) {
+      if (trimmed.includes(bindir) || trimmed.includes("fish_add_path")) {
         continue
       }
     }
 
     if (
-      (trimmed.startsWith("export PATH=") && trimmed.includes(".opencode/bin")) ||
-      (trimmed.startsWith("fish_add_path") && trimmed.includes(".opencode"))
+      (trimmed.startsWith("export PATH=") && trimmed.includes(bindir)) ||
+      (trimmed.startsWith("fish_add_path") && trimmed.includes(Flag.isArena() ? ".arena" : ".opencode"))
     ) {
       continue
     }

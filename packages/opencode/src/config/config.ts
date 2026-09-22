@@ -89,7 +89,8 @@ export namespace Config {
       )),
     ]
 
-    if (Flag.OPENCODE_CONFIG_DIR) {
+    // OPENCODE_CONFIG_DIR is an opencode-legacy override: never honored in Arena mode.
+    if (Flag.OPENCODE_CONFIG_DIR && !Flag.isArena()) {
       directories.push(Flag.OPENCODE_CONFIG_DIR)
       log.debug("loading config from OPENCODE_CONFIG_DIR", { path: Flag.OPENCODE_CONFIG_DIR })
     }
@@ -97,7 +98,7 @@ export namespace Config {
     for (const dir of unique(directories)) {
       const isArena = Flag.isArena()
       const endsWithConfigDir = isArena ? dir.endsWith(".arena") : dir.endsWith(".opencode")
-      if (endsWithConfigDir || dir === Flag.OPENCODE_CONFIG_DIR) {
+      if (endsWithConfigDir || (!isArena && dir === Flag.OPENCODE_CONFIG_DIR)) {
         const cfgFiles = isArena ? ["arena.jsonc", "arena.json"] : ["opencode.jsonc", "opencode.json"]
         for (const file of cfgFiles) {
           log.debug(`loading config from ${path.join(dir, file)}`)
@@ -206,7 +207,7 @@ export namespace Config {
       if (!md.data) continue
 
       const name = (() => {
-        const patterns = ["/.arena/command/", "/.opencode/command/", "/command/"]
+        const patterns = Flag.isArena() ? ["/.arena/command/", "/command/"] : ["/.opencode/command/", "/command/"]
         const pattern = patterns.find((p) => item.includes(p))
 
         if (pattern) {
@@ -248,7 +249,7 @@ export namespace Config {
       let agentName = path.basename(item, ".md")
       const agentFolderPath = item.includes("/.arena/agent/")
         ? item.split("/.arena/agent/")[1]
-        : item.includes("/.opencode/agent/")
+        : !Flag.isArena() && item.includes("/.opencode/agent/")
           ? item.split("/.opencode/agent/")[1]
           : item.includes("/agent/")
             ? item.split("/agent/")[1]
@@ -990,7 +991,7 @@ export namespace Config {
   export type Info = z.output<typeof Info>
 
   export const global = lazy(async () => {
-    const isArena = Flag.ARENA
+    const isArena = Flag.isArena()
     const cfgFiles = isArena
       ? [path.join(Global.Path.config, "config.json"), path.join(Global.Path.config, "arena.json"), path.join(Global.Path.config, "arena.jsonc")]
       : [path.join(Global.Path.config, "config.json"), path.join(Global.Path.config, "opencode.json"), path.join(Global.Path.config, "opencode.jsonc")]

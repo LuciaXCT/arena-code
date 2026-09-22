@@ -1,6 +1,7 @@
 import { DialogSelect, type DialogSelectRef } from "../ui/dialog-select"
 import { useTheme } from "../context/theme"
 import { useDialog } from "../ui/dialog"
+import { Flag } from "@/flag/flag"
 import { onCleanup, onMount } from "solid-js"
 
 export function DialogThemeList() {
@@ -8,7 +9,7 @@ export function DialogThemeList() {
   const options = Object.keys(theme.all())
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
     .map((value) => ({
-      title: value,
+      title: Flag.isArena() && value === "opencode" ? "arena" : value,
       value: value,
     }))
   const dialog = useDialog()
