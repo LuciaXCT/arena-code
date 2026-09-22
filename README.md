@@ -112,6 +112,8 @@ arena --config ./arena.yaml "migrate the database schema"
 
 In the TUI, `tab` switches between the four native agents (`Battle`, `DeepMode`, `Side by side`, `Direct`); `Direct` is the default. The `Battle` and `Side by side` agents run the same workflow through subagents pinned to explicit models (the `task` tool accepts a `model` in `provider/model` format), and `Battle` records your verdict with the `arena_vote` tool so Elo rankings stay in sync with `arena leaderboard`.
 
+For point-and-click comparison without typing model IDs, use `/battle` or `/side-by-side` in the TUI: you pick both models from the model picker (Battle defaults to the anonymous free pair Step 3.7 Flash and Dots 3 Note Preview; Side by side lets you customize both), watch the answers stream, then vote blind in Battle mode while identities stay hidden until the reveal.
+
 ## Configuration
 
 Arena loads configuration from:
