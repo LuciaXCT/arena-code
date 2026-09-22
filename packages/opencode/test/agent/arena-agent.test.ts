@@ -76,6 +76,9 @@ test("Battle orchestrates blind comparisons and records votes", async () => {
       expect(battle?.mode).toBe("primary")
       expect(battle?.native).toBe(true)
       expect(battle?.prompt).toContain("arena_vote")
+      expect(battle?.prompt).toContain("arena/stepfun/step-3.7-flash:free")
+      expect(battle?.prompt).toContain("arena/dots-studio/dots-3-note-preview:free")
+      expect(battle?.prompt).toContain("adopted answer")
       expect(evalPerm(battle, "task")).toBe("allow")
       expect(evalPerm(battle, "arena_vote")).toBe("allow")
       expect(evalPerm(battle, "edit")).toBe("deny")
@@ -94,6 +97,8 @@ test("Side by side compares without voting", async () => {
       expect(side?.mode).toBe("primary")
       expect(side?.native).toBe(true)
       expect(side?.prompt).toContain("never call arena_vote")
+      expect(side?.prompt).toContain("customizes")
+      expect(side?.prompt).toContain("labeled")
       expect(evalPerm(side, "task")).toBe("allow")
       expect(evalPerm(side, "arena_vote")).toBe("deny")
     },
