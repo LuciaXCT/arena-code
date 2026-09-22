@@ -22,7 +22,7 @@ export const ArenaVoteTool = Tool.define("arena_vote", async () => {
       const eloBeforeA = await ArenaBattle.getModelElo(participantA.provider, participantA.model)
       const eloBeforeB = await ArenaBattle.getModelElo(participantB.provider, participantB.model)
       const { newA, newB, deltaA, deltaB } = ArenaBattle.calculateElo(eloBeforeA, eloBeforeB, params.vote)
-      const winner = params.vote === "a" ? "a" : params.vote === "b" ? "b" : params.vote === "tie" ? "tie" : "none"
+      const winner = ArenaBattle.winnerOf(params.vote)
       await ArenaBattle.recordBattle({
         id: crypto.randomUUID(),
         timestamp: Date.now(),
@@ -38,13 +38,15 @@ export const ArenaVoteTool = Tool.define("arena_vote", async () => {
         eloAfterA: newA,
         eloAfterB: newB,
       })
-      const output = [
-        "## Arena Battle Revealed",
-        "",
-        `Model A was ${participantA.name} (${deltaA >= 0 ? "+" : ""}${deltaA} Elo -> ${newA})`,
-        `Model B was ${participantB.name} (${deltaB >= 0 ? "+" : ""}${deltaB} Elo -> ${newB})`,
-        `Winner: ${winner === "a" ? `Model A (${participantA.name})` : winner === "b" ? `Model B (${participantB.name})` : winner === "tie" ? "Tie" : "None"}`,
-      ].join("\n")
+      const { text: output } = ArenaBattle.formatReveal({
+        modelA: participantA,
+        modelB: participantB,
+        vote: params.vote,
+        newA,
+        newB,
+        deltaA,
+        deltaB,
+      })
       return {
         title: "Recorded arena vote",
         output,

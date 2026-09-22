@@ -43,6 +43,32 @@ export namespace ArenaBattle {
   export const DEFAULT_ELO = 1200
   export const K_FACTOR = 32
 
+  export type Winner = "a" | "b" | "tie" | "none"
+
+  export function winnerOf(vote: Vote): Winner {
+    return vote === "a" ? "a" : vote === "b" ? "b" : vote === "tie" ? "tie" : "none"
+  }
+
+  export function formatReveal(input: {
+    modelA: BattleParticipant
+    modelB: BattleParticipant
+    vote: Vote
+    newA: number
+    newB: number
+    deltaA: number
+    deltaB: number
+  }): { text: string; winner: Winner } {
+    const winner = winnerOf(input.vote)
+    const text = [
+      "## Arena Battle Revealed",
+      "",
+      `Model A was ${input.modelA.name} (${input.deltaA >= 0 ? "+" : ""}${input.deltaA} Elo -> ${input.newA})`,
+      `Model B was ${input.modelB.name} (${input.deltaB >= 0 ? "+" : ""}${input.deltaB} Elo -> ${input.newB})`,
+      `Winner: ${winner === "a" ? `Model A (${input.modelA.name})` : winner === "b" ? `Model B (${input.modelB.name})` : winner === "tie" ? "Tie" : "None"}`,
+    ].join("\n")
+    return { text, winner }
+  }
+
   export function calculateElo(
     ratingA: number,
     ratingB: number,
