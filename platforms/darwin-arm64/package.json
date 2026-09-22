@@ -1,6 +1,6 @@
 {
   "name": "@pawbxj/arena-cli-darwin-arm64",
-  "version": "0.0.8-dev",
+  "version": "0.0.9-dev",
   "description": "Arena CLI runtime binary for darwin-arm64. Installed automatically as an optionalDependency of @pawbxj/arena-cli.",
   "license": "MIT",
   "os": [
