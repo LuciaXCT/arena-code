@@ -179,7 +179,41 @@ EOF
 | OpenRouter | `openrouter` | `OPENROUTER_API_KEY` | Aggregator, e.g. `qwen/qwen3-coder` |
 | Ollama | `ollama` | *(none)* | Local: `http://127.0.0.1:11434/v1` |
 | LM Studio | `lmstudio` | *(none)* | Local: `http://127.0.0.1:1234/v1` |
+| Kilo Gateway | `arena` | `ARENA_API_KEY` (`KILO_API_KEY` fallback) | Built-in free `:free` models, no key needed; key unlocks paid models |
 | Custom | `custom` | `CUSTOM_API_KEY` | Set `baseURL` in config |
+
+## arena.ai built-in models (free, no key required)
+
+Arena ships with built-in models served through an OpenAI-compatible gateway backend ([Kilo AI gateway](https://kilo.ai/docs/gateway)). In the TUI and CLI they appear under the `arena.ai` provider. Free models (IDs ending in `:free`) work **anonymously**, rate-limited to 200 requests/hour per IP. No signup, no key, no config file: a fresh `arena "task"` just works.
+
+```bash
+arena --model arena/qwen/qwen3.8-27b:free "explain this codebase"
+arena --model arena/cohere/north-mini-code:free "write unit tests for utils/math.ts"
+arena --model arena "summarize the git history"  # defaults to Qwen 3.8 27B (free)
+```
+
+(`kilo` stays accepted as an alias: `--model kilo/...` and `provider: kilo` resolve to the same provider.)
+
+Or pin it in `~/.config/arena/config.yaml`:
+
+```yaml
+provider: arena
+model: qwen/qwen3.8-27b:free
+```
+
+To use paid models on the same gateway, add a key (never commit it). `ARENA_API_KEY` is read first, `KILO_API_KEY` works as fallback:
+
+```bash
+export ARENA_API_KEY="..."
+```
+
+```yaml
+provider: arena
+model: anthropic/claude-sonnet-4.5
+apiKeyEnv: ARENA_API_KEY
+```
+
+Run `arena models arena` to list the built-in free catalog.
 
 Environment variables are read directly; keys are **never** committed or bundled.
 

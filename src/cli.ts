@@ -23,7 +23,7 @@ import path from "node:path"
 import fs from "node:fs"
 import { fileURLToPath } from "node:url"
 import { createRequire } from "node:module"
-import { loadConfig, toOpenCodeConfig } from "./config"
+import { loadConfig, toOpenCodeConfig, KILO_DEFAULT_MODEL, isBuiltInProvider } from "./config"
 import { ARENA_AGENT_TYPES } from "./modes"
 
 // Injected by build.ts from package.json; falls back for `bun run src/cli.ts`.
@@ -107,7 +107,12 @@ if ((modelIndex >= 0 && (!model || model.startsWith("-"))) || (inlineModelIndex 
   console.error("Arena: --model requires a model ID")
   process.exit(1)
 }
-const [requestedProvider, requestedModel] = model?.includes("/") ? model.split(/\/(.+)/) : ["ollama", model]
+let [requestedProvider, requestedModel] = model?.includes("/") ? model.split(/\/(.+)/) : ["ollama", model]
+// Bare `kilo` or `arena` selects the built-in gateway's default free model.
+if (requestedProvider === "ollama" && (requestedModel === "kilo" || requestedModel === "arena")) {
+  requestedProvider = "arena"
+  requestedModel = undefined
+}
 const localProvider = requestedProvider === "ollama" || requestedProvider === "lmstudio" ? requestedProvider : undefined
 const bareModel = localProvider ? requestedModel : undefined
 if (localProvider && bareModel) {
@@ -144,6 +149,20 @@ if (localProvider && bareModel) {
   process.env.OPENCODE_CONFIG_CONTENT = JSON.stringify(currentConfig)
   if (modelIndex >= 0) filtered[modelIndex + 1] = `${localProvider}/${bareModel}`
   if (inlineModelIndex >= 0) filtered[inlineModelIndex] = `--model=${localProvider}/${bareModel}`
+}
+
+// Model resolution (built-in arena.ai gateway: free models, no key required;
+// `kilo` stays accepted as an alias for the same provider)
+if (isBuiltInProvider(requestedProvider)) {
+  const builtinModel = requestedModel || KILO_DEFAULT_MODEL
+  const currentConfig = toOpenCodeConfig({ ...arenaConfig.config, provider: "arena", model: builtinModel }) as {
+    model?: string
+    provider?: Record<string, Record<string, unknown>>
+  }
+  currentConfig.model = `arena/${builtinModel}`
+  process.env.OPENCODE_CONFIG_CONTENT = JSON.stringify(currentConfig)
+  if (modelIndex >= 0) filtered[modelIndex + 1] = `arena/${builtinModel}`
+  if (inlineModelIndex >= 0) filtered[inlineModelIndex] = `--model=arena/${builtinModel}`
 }
 
 // ─── Subcommand / message detection ────────────────────────────────────────────
