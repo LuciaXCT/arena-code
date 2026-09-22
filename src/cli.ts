@@ -26,8 +26,17 @@ import { createRequire } from "node:module"
 import { loadConfig, toOpenCodeConfig, KILO_DEFAULT_MODEL, isBuiltInProvider } from "./config"
 import { ARENA_AGENT_TYPES } from "./modes"
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 // Injected by build.ts from package.json; falls back for `bun run src/cli.ts`.
-const VERSION = process.env.ARENA_VERSION ?? "0.0.0-dev"
+function packageVersion(): string | undefined {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"))
+    if (typeof pkg.version === "string" && pkg.version) return pkg.version
+  } catch {}
+  return undefined
+}
+const VERSION = process.env.ARENA_VERSION ?? packageVersion() ?? "0.0.0-dev"
 
 const HELP = `Arena CLI v${VERSION} — AI coding agent that works inside local repositories.
 
@@ -58,10 +67,10 @@ Config: ~/.config/arena/config.yaml (override with ARENA_CONFIG).
 Docs: https://github.com/k1ruuuu/arena-cli#readme
 `
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
 // Activate arena branding
 process.env.ARENA = "1"
+// Hand the CLI version to the runtime so TUI surfaces match the npm package.
+process.env.ARENA_VERSION = VERSION
 const projectDirectory = process.cwd()
 
 // ─── Local flags (answered without the runtime) ──────────────────────────────

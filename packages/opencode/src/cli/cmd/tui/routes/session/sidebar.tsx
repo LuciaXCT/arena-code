@@ -306,11 +306,20 @@ export function Sidebar(props: { sessionID: string }) {
             <span style={{ fg: theme.text }}>{directory().split("/").at(-1)}</span>
           </text>
           <text fg={theme.textMuted}>
-            <span style={{ fg: theme.success }}>•</span> <b>Open</b>
-            <span style={{ fg: theme.text }}>
-              <b>Code</b>
-            </span>{" "}
-            <span>{Installation.VERSION}</span>
+            <span style={{ fg: theme.success }}>•</span>{" "}
+            {Flag.isArena() ? (
+              <>
+                <b>arena.ai</b> <span>{process.env.ARENA_VERSION ?? Installation.VERSION}</span>
+              </>
+            ) : (
+              <>
+                <b>Open</b>
+                <span style={{ fg: theme.text }}>
+                  <b>Code</b>
+                </span>{" "}
+                <span>{Installation.VERSION}</span>
+              </>
+            )}
           </text>
         </box>
       </box>

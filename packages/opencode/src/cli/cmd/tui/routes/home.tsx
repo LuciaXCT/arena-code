@@ -11,6 +11,7 @@ import { useDirectory } from "../context/directory"
 import { useRouteData } from "@tui/context/route"
 import { usePromptRef } from "../context/prompt"
 import { Installation } from "@/installation"
+import { Flag } from "@/flag/flag"
 import { useKV } from "../context/kv"
 import { useCommandDialog } from "../component/dialog-command"
 
@@ -130,7 +131,9 @@ export function Home() {
         </box>
         <box flexGrow={1} />
         <box flexShrink={0}>
-          <text fg={theme.textMuted}>{Installation.VERSION}</text>
+          <text fg={theme.textMuted}>
+            {Flag.isArena() ? (process.env.ARENA_VERSION ?? Installation.VERSION) : Installation.VERSION}
+          </text>
         </box>
       </box>
     </>
