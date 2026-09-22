@@ -13,6 +13,7 @@ import { LocalProvider, useLocal } from "@tui/context/local"
 import { DialogModel, useConnected } from "@tui/component/dialog-model"
 import { DialogMcp } from "@tui/component/dialog-mcp"
 import { DialogPlugin } from "@tui/component/dialog-plugin"
+import { ComparePrompt } from "@tui/component/dialog-compare"
 import { DialogStatus } from "@tui/component/dialog-status"
 import { DialogThemeList } from "@tui/component/dialog-theme-list"
 import { DialogHelp } from "./ui/dialog-help"
@@ -374,6 +375,22 @@ function App() {
             category: "Agent",
             onSelect: () => {
               dialog.replace(() => <DialogPlugin />)
+            },
+          },
+          {
+            title: "Battle models",
+            value: "battle.compare",
+            category: "Agent",
+            onSelect: () => {
+              dialog.replace(() => <ComparePrompt mode="battle" />)
+            },
+          },
+          {
+            title: "Compare models side by side",
+            value: "sidebyside.compare",
+            category: "Agent",
+            onSelect: () => {
+              dialog.replace(() => <ComparePrompt mode="side-by-side" />)
             },
           },
         ]

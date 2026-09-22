@@ -435,6 +435,16 @@ export function Autocomplete(props: {
               description: "manage plugins",
               onSelect: () => command.trigger("plugin.list"),
             },
+            {
+              display: "/battle",
+              description: "blind battle between two models you pick",
+              onSelect: () => command.trigger("battle.compare"),
+            },
+            {
+              display: "/side-by-side",
+              description: "run one prompt on two models you pick",
+              onSelect: () => command.trigger("sidebyside.compare"),
+            },
           ]
         : []),
       {

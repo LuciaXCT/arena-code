@@ -15,12 +15,26 @@ export function useConnected() {
   )
 }
 
-export function DialogModel(props: { providerID?: string }) {
+export function DialogModel(props: {
+  providerID?: string
+  title?: string
+  onPick?: (model: { providerID: string; modelID: string }) => void
+}) {
   const local = useLocal()
   const sync = useSync()
   const dialog = useDialog()
   const [ref, setRef] = createSignal<DialogSelectRef<unknown>>()
   const [query, setQuery] = createSignal("")
+
+  // Slot picking (compare flows) reports the choice without touching state.
+  function pick(providerID: string, modelID: string) {
+    if (props.onPick) {
+      props.onPick({ providerID, modelID })
+      return
+    }
+    dialog.clear()
+    local.model.set({ providerID, modelID }, { recent: true })
+  }
 
   const connected = useConnected()
   const providers = createDialogProviderOptions()
@@ -60,14 +74,7 @@ export function DialogModel(props: { providerID?: string }) {
           disabled: provider.id === "opencode" && model.id.includes("-nano"),
           footer: model.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
           onSelect: () => {
-            dialog.clear()
-            local.model.set(
-              {
-                providerID: provider.id,
-                modelID: model.id,
-              },
-              { recent: true },
-            )
+            pick(provider.id, model.id)
           },
         },
       ]
@@ -91,14 +98,7 @@ export function DialogModel(props: { providerID?: string }) {
           disabled: provider.id === "opencode" && model.id.includes("-nano"),
           footer: model.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
           onSelect: () => {
-            dialog.clear()
-            local.model.set(
-              {
-                providerID: provider.id,
-                modelID: model.id,
-              },
-              { recent: true },
-            )
+            pick(provider.id, model.id)
           },
         },
       ]
@@ -133,14 +133,7 @@ export function DialogModel(props: { providerID?: string }) {
               disabled: provider.id === "opencode" && model.includes("-nano"),
               footer: info.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
               onSelect() {
-                dialog.clear()
-                local.model.set(
-                  {
-                    providerID: provider.id,
-                    modelID: model,
-                  },
-                  { recent: true },
-                )
+                pick(provider.id, model)
               },
             }
           }),
@@ -197,6 +190,7 @@ export function DialogModel(props: { providerID?: string }) {
   )
 
   const title = createMemo(() => {
+    if (props.title) return props.title
     if (provider()) return provider()!.name
     return "Select model"
   })
