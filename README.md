@@ -291,8 +291,9 @@ arena plugin marketplace remove my-marketplace
 
 Notes:
 
+- In the TUI, `/plugin` opens the plugin manager (install, enable/disable, uninstall, update, marketplaces) — same role as Claude Code's `/plugin` panel. Every install and enable shows a permission summary and asks for confirmation.
 - Default scope is global (`~/.config/arena/plugins/`). `--scope project` installs into `.arena/plugins/` so the team shares it.
-- Every install and enable shows a permission summary (source, skills, commands, agents) and asks for confirmation. Pass `--yes` for scripts, or run in a TTY-less environment which requires `--yes`.
+- Pass `--yes` for scripts, or run in a TTY-less environment which requires `--yes`.
 - Installed plugin skills appear as `/plugin:skill` slash commands and model-invocable skills. A new session picks them up (same as Claude Code `/reload-plugins`).
 - `hooks` and `mcpServers` in manifests are parsed and reported by `validate`, but not executed yet.
 

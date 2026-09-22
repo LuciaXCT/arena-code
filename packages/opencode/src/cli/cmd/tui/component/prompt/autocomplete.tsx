@@ -12,6 +12,7 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { Locale } from "@/util/locale"
 import type { PromptInfo } from "./history"
 import { useFrecency } from "./frecency"
+import { Flag } from "@/flag/flag"
 
 function removeLineRange(input: string) {
   const hashIndex = input.lastIndexOf("#")
@@ -427,6 +428,15 @@ export function Autocomplete(props: {
         description: "toggle MCPs",
         onSelect: () => command.trigger("mcp.list"),
       },
+      ...(Flag.isArena()
+        ? [
+            {
+              display: "/plugin",
+              description: "manage plugins",
+              onSelect: () => command.trigger("plugin.list"),
+            },
+          ]
+        : []),
       {
         display: "/theme",
         description: "toggle theme",
