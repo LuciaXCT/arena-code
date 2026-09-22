@@ -14,6 +14,7 @@ import PROMPT_DEEPMODE from "./prompt/deepmode.txt"
 import PROMPT_DIRECT from "./prompt/direct.txt"
 import PROMPT_BATTLE from "./prompt/battle.txt"
 import PROMPT_SIDEBYSIDE from "./prompt/sidebyside.txt"
+import PROMPT_UNCENSORED from "./prompt/uncensored.txt"
 import { PermissionNext } from "@/permission/next"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { ConfigMarkdown } from "../config/markdown"
@@ -24,7 +25,7 @@ export namespace Agent {
   // Live check (not the Flag.ARENA const) so tests can toggle modes per case.
   const arena = () => Flag.isArena()
 
-  export const ARENA_ROSTER = ["Battle", "DeepMode", "Side by side", "Direct"] as const
+  export const ARENA_ROSTER = ["Battle", "DeepMode", "Side by side", "Direct", "Uncensored"] as const
   // Native Build/Plan are retired in Arena mode (the roster replaces them).
   // Custom file agents are never retired, even when named the same.
   function retired(info: Info) {
@@ -143,6 +144,15 @@ export namespace Agent {
               mode: "primary" as const,
               native: true,
               prompt: PROMPT_DIRECT,
+            },
+            Uncensored: {
+              name: "Uncensored",
+              description: "Uncensored offensive security and exploit development agent. No content restrictions beyond physical harm.",
+              options: {},
+              permission: PermissionNext.merge(defaults, user),
+              mode: "primary" as const,
+              native: true,
+              prompt: PROMPT_UNCENSORED,
             },
           }
         : {}),

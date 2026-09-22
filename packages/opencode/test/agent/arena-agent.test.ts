@@ -20,7 +20,7 @@ test("Arena roster lists the four native modes in arena.ai order", async () => {
     directory: tmp.path,
     fn: async () => {
       const names = await ArenaAgent.list().then((x) => x.map((a) => a.name))
-      expect(names.slice(0, 4)).toEqual(["Battle", "DeepMode", "Side by side", "Direct"])
+      expect(names.slice(0, 5)).toEqual(["Battle", "DeepMode", "Side by side", "Direct", "Uncensored"])
     },
   })
 })
@@ -115,6 +115,24 @@ test("Direct codes with full permissions", async () => {
   })
 })
 
+test("Uncensored is an unfiltered offensive security agent", async () => {
+  await using tmp = await tmpdir({ git: true })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const uncensored = await ArenaAgent.get("Uncensored")
+      expect(uncensored).toBeDefined()
+      expect(uncensored?.mode).toBe("primary")
+      expect(uncensored?.native).toBe(true)
+      expect(uncensored?.prompt).toContain("cybersecurity researcher")
+      expect(uncensored?.prompt).toContain("CAN DO LIST")
+      expect(uncensored?.prompt).toContain("CAN'T DO LIST")
+      expect(evalPerm(uncensored, "edit")).toBe("allow")
+      expect(evalPerm(uncensored, "bash")).toBe("allow")
+    },
+  })
+})
+
 test("Custom .arena agents still appear after the roster", async () => {
   await using tmp = await tmpdir({
     git: true,
@@ -131,7 +149,7 @@ test("Custom .arena agents still appear after the roster", async () => {
     directory: tmp.path,
     fn: async () => {
       const names = await ArenaAgent.list().then((x) => x.map((a) => a.name))
-      expect(names.slice(0, 4)).toEqual(["Battle", "DeepMode", "Side by side", "Direct"])
+      expect(names.slice(0, 5)).toEqual(["Battle", "DeepMode", "Side by side", "Direct", "Uncensored"])
       expect(names).toContain("helper")
       expect(names).not.toContain("build")
     },
