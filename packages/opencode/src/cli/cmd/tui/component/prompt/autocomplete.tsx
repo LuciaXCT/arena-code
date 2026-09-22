@@ -313,8 +313,10 @@ export function Autocomplete(props: {
     const results: AutocompleteOption[] = []
     const s = session()
     for (const command of sync.data.command) {
+      // argumentHint is served by newer servers; older snapshots simply omit it.
+      const hint = (command as { argumentHint?: string }).argumentHint?.trim()
       results.push({
-        display: "/" + command.name + (command.mcp ? " (MCP)" : ""),
+        display: "/" + command.name + (command.mcp ? " (MCP)" : "") + (hint ? ` ${hint}` : ""),
         description: command.description,
         onSelect: () => {
           const newText = "/" + command.name + " "

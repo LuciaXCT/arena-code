@@ -32,6 +32,7 @@ export namespace Command {
       agent: z.string().optional(),
       model: z.string().optional(),
       mcp: z.boolean().optional(),
+      argumentHint: z.string().optional(),
       // workaround for zod not supporting async functions natively so we use getters
       // https://zod.dev/v4/changelog?id=zfunction
       template: z.promise(z.string()).or(z.string()),
@@ -143,6 +144,7 @@ export namespace Command {
       result[skill.name] = {
         name: skill.name,
         description: Skill.combinedDescription(skill),
+        ...(skill.argumentHint ? { argumentHint: skill.argumentHint } : {}),
         ...(skill.model ? { model: skill.model } : {}),
         ...(skill.skillContext === "fork" ? { subtask: true } : {}),
         get template() {
@@ -160,24 +162,24 @@ export namespace Command {
       const parts = await ArenaPlugin.allComponents().catch(() => undefined)
       for (const item of parts?.commands ?? []) {
         if (result[item.name]) continue
-        const file = item.file
+        const parsed = await ConfigMarkdown.parse(item.file).catch(() => undefined)
+        const dir = path.dirname(item.file)
+        const body = (parsed?.content?.trim() ?? "")
+          .replaceAll("${CLAUDE_SKILL_DIR}", dir)
+          .replaceAll("${ARENA_SKILL_DIR}", dir)
+        const front = (parsed?.data ?? {}) as Record<string, unknown>
+        const description =
+          typeof front.description === "string" && front.description.trim()
+            ? front.description.trim()
+            : `Plugin command from ${item.plugin}`
         result[item.name] = {
           name: item.name,
-          description: `Plugin command from ${item.plugin}`,
-          get template() {
-            return new Promise<string>(async (resolve) => {
-              const parsed = await ConfigMarkdown.parse(file).catch(() => undefined)
-              const dir = path.dirname(file)
-              const body = (parsed?.content?.trim() ?? "")
-                .replaceAll("${CLAUDE_SKILL_DIR}", dir)
-                .replaceAll("${ARENA_SKILL_DIR}", dir)
-              if (typeof parsed?.data?.description === "string" && parsed.data.description.trim()) {
-                result[item.name].description = parsed.data.description.trim()
-              }
-              resolve(body)
-            })
-          },
-          hints: [],
+          description,
+          ...(typeof front["argument-hint"] === "string" && front["argument-hint"].trim()
+            ? { argumentHint: front["argument-hint"].trim() }
+            : {}),
+          template: body,
+          hints: hints(body),
         }
       }
     }

@@ -259,6 +259,7 @@ Notes:
 - `description` + `when_to_use` (max 1536 chars) is the routing signal. Put the use case first.
 - `$name` maps to positional `$1`, `$2` from `arguments`. `$ARGUMENTS`, `$1`, and `!`command`` work like slash commands. `${CLAUDE_SKILL_DIR}` and `${ARENA_SKILL_DIR}` resolve to the skill folder.
 - `user-invocable: false` hides the skill from the `/` menu but keeps it model-invoked. `disable-model-invocation: true` hides it from the model.
+- Skills with `argument-hint` show it in the `/` menu (e.g. `/deploy [env]`), like Claude Code.
 - Only `name` + `description` stay in context. Body and `references/`, `examples/`, `scripts/` load on demand, so keep `SKILL.md` lean and reference supporting files explicitly.
 
 ## Plugins (Claude Code compatible)
