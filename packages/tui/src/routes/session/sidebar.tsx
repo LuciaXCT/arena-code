@@ -1,6 +1,7 @@
 import { useProject } from "../../context/project"
 import { useSync } from "../../context/sync"
-import { createMemo, Show } from "solid-js"
+import { createMemo, For, Show } from "solid-js"
+import { useRoute } from "../../context/route"
 import { useTheme } from "../../context/theme"
 import { useTuiConfig } from "../../config"
 import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -15,7 +16,14 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
   const sync = useSync()
   const { theme } = useTheme()
   const tuiConfig = useTuiConfig()
+  const route = useRoute()
   const session = createMemo(() => sync.session.get(props.sessionID))
+  const recent = createMemo(() =>
+    sync.data.session
+      .filter((item) => !item.parentID && !item.time.archived)
+      .toSorted((a, b) => b.time.updated - a.time.updated)
+      .slice(0, 6),
+  )
   const workspace = () => {
     const workspaceID = session()?.workspaceID
     if (!workspaceID) return

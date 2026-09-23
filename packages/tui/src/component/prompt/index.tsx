@@ -1315,8 +1315,8 @@ export function Prompt(props: PromptProps) {
       const example = shell()[store.placeholder % shell().length]
       return `Run a command… "${example}"`
     }
-    if (!list().length) return "Ask Arena Code"
-    return "Ask Arena Code"
+    if (!list().length) return "How can I help you today?"
+    return list()[store.placeholder % list().length] ?? "How can I help you today?"
   })
 
   const spinnerDef = createMemo(() => {

@@ -1,5 +1,6 @@
 import { Prompt, type PromptRef } from "../component/prompt"
-import { createEffect, createMemo, createSignal, onMount } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onMount } from "solid-js"
+import { useTheme } from "../context/theme"
 import { Logo } from "../component/logo"
 import { useSync } from "../context/sync"
 import { Toast } from "../ui/toast"
@@ -10,14 +11,21 @@ import { useLocal } from "../context/local"
 import { usePluginRuntime } from "../plugin/runtime"
 import { useEditorContext } from "../context/editor"
 import { useTerminalDimensions } from "@opentui/solid"
+import { TextAttributes } from "@opentui/core"
 import { useTuiConfig } from "../config"
 import { HomeSessionDestinationProvider } from "./home/session-destination"
 
 let once = false
 const placeholder = {
-  normal: ["Fix a TODO in the codebase", "What is the tech stack of this project?", "Fix broken tests"],
+  normal: ["How can I help you today?"],
   shell: ["ls -la", "git status", "pwd"],
 }
+
+const chips = [
+  ["Magic Design", "Design this with one accent, a clear headline, and no clutter."],
+  ["Full-Stack", "Build the smallest full-stack version of this, with a test."],
+  ["Write Code", "Look at this repo and implement the next obvious fix."],
+] as const
 
 export function Home() {
   const pluginRuntime = usePluginRuntime()
@@ -30,6 +38,7 @@ export function Home() {
   const editor = useEditorContext()
   const dimensions = useTerminalDimensions()
   const tuiConfig = useTuiConfig()
+  const { theme } = useTheme()
   const promptMaxWidth = createMemo(() => {
     const configured = tuiConfig.prompt?.max_width
     if (configured === "auto") return Math.max(75, Math.floor(dimensions().width * 0.7))
@@ -78,10 +87,32 @@ export function Home() {
           </pluginRuntime.Slot>
         </box>
         <box height={1} minHeight={0} flexShrink={1} />
+        <box alignItems="center" flexShrink={0} marginBottom={1}>
+          <text fg={theme.text} attributes={TextAttributes.BOLD}>
+            What can I build for you?
+          </text>
+          <text fg={theme.textMuted}>Interact with Arena Code</text>
+        </box>
         <box width="100%" maxWidth={promptMaxWidth()} zIndex={1000} paddingTop={1} flexShrink={0}>
           <pluginRuntime.Slot name="home_prompt" mode="replace" ref={bind}>
             <Prompt ref={bind} right={<pluginRuntime.Slot name="home_prompt_right" />} placeholders={placeholder} />
           </pluginRuntime.Slot>
+          <box flexDirection="row" gap={1} justifyContent="center" marginTop={1}>
+            <For each={chips}>
+              {([label, prompt]) => (
+                <box
+                  border={["top", "bottom", "left", "right"]}
+                  borderColor={theme.border}
+                  paddingLeft={1}
+                  paddingRight={1}
+                  backgroundColor={theme.backgroundElement}
+                  onMouseUp={() => ref()?.set({ input: prompt, parts: [] })}
+                >
+                  <text fg={theme.textMuted}>{label}</text>
+                </box>
+              )}
+            </For>
+          </box>
         </box>
         <pluginRuntime.Slot name="home_bottom" />
         <box flexGrow={1} minHeight={0} />

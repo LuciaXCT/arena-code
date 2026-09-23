@@ -258,7 +258,7 @@ export function Session() {
   const [conceal, setConceal] = createSignal(true)
   const thinking = useThinkingMode()
   const thinkingMode = thinking.mode
-  const showThinking = createMemo(() => true)
+  const showThinking = createMemo(() => thinkingMode() === "show")
   const [timestamps, setTimestamps] = kv.signal<"hide" | "show">("timestamps", "hide")
   const [showDetails, setShowDetails] = kv.signal("tool_details_visibility", true)
   const [showAssistantMetadata, _setShowAssistantMetadata] = kv.signal("assistant_metadata_visibility", true)
@@ -275,7 +275,7 @@ export function Session() {
     return false
   })
   const showTimestamps = createMemo(() => timestamps() === "show")
-  const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
+  const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 28 : 0) - 4)
   const providers = createMemo(() => Model.index(sync.data.provider))
 
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
@@ -1175,7 +1175,11 @@ export function Session() {
         }}
       >
         <box flexDirection="row" flexGrow={1} minHeight={0}>
-          <box flexGrow={1} minHeight={0} paddingBottom={1} paddingLeft={2} paddingRight={2} gap={1}>
+          <Show when={sidebarVisible() && wide()}>
+            <Sidebar sessionID={route.sessionID} />
+          </Show>
+          <box flexGrow={1} minHeight={0} alignItems="center">
+          <box width="100%" maxWidth={78} flexGrow={1} minHeight={0} paddingBottom={1} paddingLeft={2} paddingRight={2} gap={1}>
             <Show when={session()}>
               <scrollbox
                 ref={(r) => (scroll = r)}
@@ -1335,25 +1339,19 @@ export function Session() {
             </Show>
             <Toast />
           </box>
-          <Show when={sidebarVisible()}>
-            <Switch>
-              <Match when={wide()}>
-                <Sidebar sessionID={route.sessionID} />
-              </Match>
-              <Match when={!wide()}>
-                <box
-                  position="absolute"
-                  top={0}
-                  left={0}
-                  right={0}
-                  bottom={0}
-                  alignItems="flex-end"
-                  backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
-                >
-                  <Sidebar sessionID={route.sessionID} />
-                </box>
-              </Match>
-            </Switch>
+          </box>
+          <Show when={sidebarVisible() && !wide()}>
+            <box
+              position="absolute"
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
+              alignItems="flex-end"
+              backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
+            >
+              <Sidebar sessionID={route.sessionID} />
+            </box>
           </Show>
         </box>
       </context.Provider>
@@ -1686,32 +1684,78 @@ function ReasoningHeader(props: {
   )
 }
 
+function splitFences(text: string) {
+  const parts: { kind: "prose" | "code"; text: string }[] = []
+  let cursor = 0
+  while (cursor < text.length) {
+    const open = text.indexOf("```", cursor)
+    if (open === -1) {
+      const rest = text.slice(cursor).trim()
+      if (rest) parts.push({ kind: "prose", text: rest })
+      break
+    }
+    const before = text.slice(cursor, open).trim()
+    if (before) parts.push({ kind: "prose", text: before })
+    const close = text.indexOf("```", open + 3)
+    if (close === -1) {
+      parts.push({ kind: "code", text: text.slice(open) })
+      break
+    }
+    parts.push({ kind: "code", text: text.slice(open, close + 3) })
+    cursor = close + 3
+  }
+  return parts
+}
+
 function TextPart(props: { last: boolean; part: TextPart; message: AssistantMessage }) {
   const ctx = use()
   const { theme, syntax } = useTheme()
+  const blocks = createMemo(() => splitFences(props.part.text.trim()))
   return (
     <Show when={props.part.text.trim()}>
-      <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3} marginTop={1} flexShrink={0}>
+      <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={1} marginTop={1} flexShrink={0}>
         <Show when={props.last || !props.part.time?.end}>
           <text fg={theme.primary} attributes={TextAttributes.BOLD}>ARENA</text>
         </Show>
-        <box
-          border={["left"]}
-          borderColor={theme.primary}
-          customBorderChars={SplitBorder.customBorderChars}
-          paddingLeft={2}
-        >
-        <markdown
-          syntaxStyle={syntax()}
-          streaming={true}
-          internalBlockMode="top-level"
-          content={props.part.text.trim()}
-          tableOptions={{ style: "grid" }}
-          conceal={ctx.conceal()}
-          fg={theme.markdownText}
-          bg={theme.background}
-        />
-        </box>
+        <For each={blocks()}>
+          {(block) => (
+            <Show
+              when={block.kind === "code"}
+              fallback={
+                <markdown
+                  syntaxStyle={syntax()}
+                  streaming={true}
+                  internalBlockMode="top-level"
+                  content={block.text}
+                  tableOptions={{ style: "grid" }}
+                  conceal={ctx.conceal()}
+                  fg={theme.markdownText}
+                  bg={theme.background}
+                />
+              }
+            >
+              <box
+                marginTop={1}
+                border={["left"]}
+                borderColor={theme.primary}
+                customBorderChars={SplitBorder.customBorderChars}
+                paddingLeft={1}
+                backgroundColor={theme.backgroundPanel}
+              >
+                <markdown
+                  syntaxStyle={syntax()}
+                  streaming={true}
+                  internalBlockMode="top-level"
+                  content={block.text}
+                  tableOptions={{ style: "grid" }}
+                  conceal={ctx.conceal()}
+                  fg={theme.markdownText}
+                  bg={theme.backgroundPanel}
+                />
+              </box>
+            </Show>
+          )}
+        </For>
       </box>
     </Show>
   )
