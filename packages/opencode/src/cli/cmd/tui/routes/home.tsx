@@ -99,7 +99,7 @@ export function Home() {
               const age = timeAgo(s.time.updated)
               const sid = s.id.slice(0, 6)
               return (
-                <box flexDirection="row" gap={1} paddingLeft={1} paddingTop={0} paddingBottom={1} border={["bottom"]} borderColor={theme.borderSubtle}>
+                <box flexDirection="row" gap={1} paddingLeft={1} paddingTop={0} paddingBottom={1} border={["bottom"]} borderColor={theme.borderSubtle} onMouseUp={() => router.navigate({ type: "session", sessionID: s.id })}>
                   <text fg={theme.textMuted}>○ {title} · {age} · {sid}</text>
                 </box>
               )
@@ -141,7 +141,7 @@ export function Home() {
               const sidShort = s.id.slice(0, 6)
               const age = timeAgo(s.time.updated)
               return (
-                <box flexDirection="row" gap={1} paddingTop={0} paddingBottom={0}>
+                <box flexDirection="row" gap={1} paddingTop={0} paddingBottom={0} onMouseUp={() => router.navigate({ type: "session", sessionID: s.id })}>
                   <text fg={theme.textMuted}>○ {title} · {age} · {sidShort}</text>
                 </box>
               )
@@ -150,7 +150,7 @@ export function Home() {
         </Show>
 
         <box marginTop={1}>
-          <text fg={theme.textMuted}>○ {versionText} · nova-dark · no garble · fit</text>
+          <text fg={theme.textMuted}>○ {versionText} · nova-dark · clickable · fit</text>
         </box>
         <Toast />
       </box>
