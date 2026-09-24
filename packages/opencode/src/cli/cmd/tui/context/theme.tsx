@@ -4,6 +4,7 @@ import { createEffect, createMemo, onMount } from "solid-js"
 import { useSync } from "@tui/context/sync"
 import { createSimpleContext } from "./helper"
 import { Flag } from "@/flag/flag"
+import arenaCode from "./theme/arena-code.json" with { type: "json" }
 import aura from "./theme/aura.json" with { type: "json" }
 import ayu from "./theme/ayu.json" with { type: "json" }
 import catppuccin from "./theme/catppuccin.json" with { type: "json" }
@@ -138,6 +139,7 @@ type ThemeJson = {
 }
 
 export const DEFAULT_THEMES: Record<string, ThemeJson> = {
+  ["arena-code"]: arenaCode,
   aura,
   ayu,
   catppuccin,
@@ -350,7 +352,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     })
 
     const values = createMemo(() => {
-      return resolveTheme(store.themes[store.active] ?? store.themes.opencode, store.mode)
+      return resolveTheme(store.themes[store.active] ?? store.themes["arena-code"] ?? store.themes.opencode, store.mode)
     })
 
     const syntax = createMemo(() => generateSyntax(values()))

@@ -290,7 +290,7 @@ export function Sidebar(props: { sessionID: string }) {
                     ✕
                   </text>
                 </box>
-                <text fg={theme.textMuted}>{Flag.ARENA ? "arena.ai" : "OpenCode"} includes free models so you can start immediately.</text>
+                <text fg={theme.textMuted}>Arena Code includes free models so you can start immediately.</text>
                 <text fg={theme.textMuted}>
                   Connect from 75+ providers to use other models, including Claude, GPT, Gemini etc
                 </text>
@@ -306,20 +306,11 @@ export function Sidebar(props: { sessionID: string }) {
             <span style={{ fg: theme.text }}>{directory().split("/").at(-1)}</span>
           </text>
           <text fg={theme.textMuted}>
-            <span style={{ fg: theme.success }}>•</span>{" "}
-            {Flag.isArena() ? (
-              <>
-                <b>arena.ai</b> <span>{process.env.ARENA_VERSION ?? Installation.VERSION}</span>
-              </>
-            ) : (
-              <>
-                <b>Open</b>
-                <span style={{ fg: theme.text }}>
-                  <b>Code</b>
-                </span>{" "}
-                <span>{Installation.VERSION}</span>
-              </>
-            )}
+            <span style={{ fg: theme.success }}>•</span> <b>Arena</b>
+            <span style={{ fg: theme.text }}>
+              <b> Code</b>
+            </span>{" "}
+            <span>{Flag.isArena() ? (process.env.ARENA_VERSION ?? Installation.VERSION) : Installation.VERSION}</span>
           </text>
         </box>
       </box>

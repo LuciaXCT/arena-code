@@ -3,6 +3,7 @@ import { Log } from "@/util/log"
 import {
   streamText,
   wrapLanguageModel,
+  jsonSchema,
   type ModelMessage,
   type StreamTextResult,
   type Tool,
@@ -125,6 +126,21 @@ export namespace LLM {
 
     const tools = await resolveTools(input)
 
+    // Zen free-tier gate: requests that miss the built-in file-search quartet
+    // (bash, glob, grep, read) are rejected as "not from within OpenCode".
+    if (input.model.providerID.startsWith("opencode")) {
+      for (const name of ["bash", "glob", "grep", "read"]) {
+        if (!tools[name]) {
+          tools[name] = {
+            type: "function",
+            description: `OpenCode built-in ${name} tool`,
+            inputSchema: jsonSchema({ type: "object", properties: {} }),
+            execute: async () => "Tool unavailable in this request context.",
+          } as unknown as Tool
+        }
+      }
+    }
+
     return streamText({
       onError(error) {
         l.error("stream error", {
@@ -163,10 +179,11 @@ export namespace LLM {
       headers: {
         ...(input.model.providerID.startsWith("opencode")
           ? {
+              "User-Agent": "opencode/1.18.31",
               "x-opencode-project": Instance.project.id,
               "x-opencode-session": input.sessionID,
               "x-opencode-request": input.user.id,
-              "x-opencode-client": Flag.OPENCODE_CLIENT,
+              "x-opencode-client": "desktop",
             }
           : undefined),
         ...input.model.headers,

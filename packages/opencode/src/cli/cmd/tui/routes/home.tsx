@@ -1,5 +1,6 @@
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import { createMemo, Match, onMount, Show, Switch } from "solid-js"
+import { createMemo, For, Match, onMount, Show, Switch } from "solid-js"
+import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
 import { Logo } from "../component/logo"
 import { DidYouKnow, randomizeTip } from "../component/did-you-know"
@@ -17,6 +18,12 @@ import { useCommandDialog } from "../component/dialog-command"
 
 // TODO: what is the best way to do this?
 let once = false
+
+const chips = [
+  ["Magic Design", "Design this with one accent, a clear headline, and no clutter."],
+  ["Full-Stack", "Build the smallest full-stack version of this, with a test."],
+  ["Write Code", "Look at this repo and implement the next obvious fix."],
+] as const
 
 export function Home() {
   const sync = useSync()
@@ -95,6 +102,12 @@ export function Home() {
     <>
       <box flexGrow={1} justifyContent="center" alignItems="center" paddingLeft={2} paddingRight={2} gap={1}>
         <Logo />
+        <box alignItems="center" flexShrink={0} marginBottom={1}>
+          <text fg={theme.text} attributes={TextAttributes.BOLD}>
+            What can I build for you?
+          </text>
+          <text fg={theme.textMuted}>Interact with Arena Code</text>
+        </box>
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1}>
           <Prompt
             ref={(r) => {
@@ -103,6 +116,22 @@ export function Home() {
             }}
             hint={Hint}
           />
+          <box flexDirection="row" gap={1} justifyContent="center" marginTop={1}>
+            <For each={chips}>
+              {([label, text]) => (
+                <box
+                  border={["top", "bottom", "left", "right"]}
+                  borderColor={theme.border}
+                  paddingLeft={1}
+                  paddingRight={1}
+                  backgroundColor={theme.backgroundElement}
+                  onMouseUp={() => prompt?.set({ input: text, parts: [] })}
+                >
+                  <text fg={theme.textMuted}>{label}</text>
+                </box>
+              )}
+            </For>
+          </box>
         </box>
         <Toast />
       </box>

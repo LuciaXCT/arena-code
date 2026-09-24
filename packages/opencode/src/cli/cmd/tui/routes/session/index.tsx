@@ -133,7 +133,7 @@ export function Session() {
   const dimensions = useTerminalDimensions()
   const [sidebar, setSidebar] = createSignal<"show" | "hide" | "auto">(kv.get("sidebar", "auto"))
   const [conceal, setConceal] = createSignal(true)
-  const [showThinking, setShowThinking] = createSignal(kv.get("thinking_visibility", true))
+  const [showThinking, setShowThinking] = createSignal(kv.get("thinking_visibility", false))
   const [showTimestamps, setShowTimestamps] = createSignal(kv.get("timestamps", "hide") === "show")
   const [usernameVisible, setUsernameVisible] = createSignal(kv.get("username_visible", true))
   const [showDetails, setShowDetails] = createSignal(kv.get("tool_details_visibility", true))
@@ -914,7 +914,11 @@ export function Session() {
       }}
     >
       <box flexDirection="row">
-        <box flexGrow={1} paddingBottom={1} paddingTop={1} paddingLeft={2} paddingRight={2} gap={1}>
+        <Show when={sidebarVisible() && wide()}>
+          <Sidebar sessionID={route.sessionID} />
+        </Show>
+        <box flexGrow={1} minHeight={0} alignItems="center">
+        <box width="100%" maxWidth={78} flexGrow={1} paddingBottom={1} paddingTop={1} paddingLeft={2} paddingRight={2} gap={1}>
           <Show when={session()}>
             <Show when={!sidebarVisible()}>
               <Header />
@@ -1056,8 +1060,19 @@ export function Session() {
           </Show>
           <Toast />
         </box>
-        <Show when={sidebarVisible()}>
-          <Sidebar sessionID={route.sessionID} />
+        </box>
+        <Show when={sidebarVisible() && !wide()}>
+          <box
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            alignItems="flex-end"
+            backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
+          >
+            <Sidebar sessionID={route.sessionID} />
+          </box>
         </Show>
       </box>
     </context.Provider>
@@ -1083,7 +1098,17 @@ function UserMessage(props: {
 }) {
   const ctx = use()
   const local = useLocal()
-  const text = createMemo(() => props.parts.flatMap((x) => (x.type === "text" && !x.synthetic ? [x] : []))[0])
+  const text = createMemo(() => {
+    const texts = props.parts
+      .map((x) => {
+        if (x.type === "text" && !x.synthetic) {
+          return x.text
+        }
+        return null
+      })
+      .filter(Boolean)
+    return texts.join("\n\n")
+  })
   const files = createMemo(() => props.parts.flatMap((x) => (x.type === "file" ? [x] : [])))
   const sync = useSync()
   const { theme } = useTheme()
@@ -1098,10 +1123,13 @@ function UserMessage(props: {
       <Show when={text()}>
         <box
           id={props.message.id}
+          ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
           border={["left"]}
-          borderColor={color()}
+          borderColor={theme.primary}
           customBorderChars={SplitBorder.customBorderChars}
           marginTop={props.index === 0 ? 0 : 1}
+          marginLeft="auto"
+          width="70%"
         >
           <box
             onMouseOver={() => {
@@ -1117,19 +1145,20 @@ function UserMessage(props: {
             backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
             flexShrink={0}
           >
-            <text fg={theme.text}>{text()?.text}</text>
+            <text fg={theme.textMuted} attributes={TextAttributes.BOLD}>
+              YOU
+            </text>
+            <text fg={theme.text}>{text()}</text>
             <Show when={files().length}>
               <box flexDirection="row" paddingBottom={1} paddingTop={1} gap={1} flexWrap="wrap">
                 <For each={files()}>
                   {(file) => {
-                    const bg = createMemo(() => {
-                      if (file.mime.startsWith("image/")) return theme.accent
-                      if (file.mime === "application/pdf") return theme.primary
-                      return theme.secondary
-                    })
+                    const directory = file.mime === "application/x-directory"
                     return (
                       <text fg={theme.text}>
-                        <span style={{ bg: bg(), fg: theme.background }}> {MIME_BADGE[file.mime] ?? file.mime} </span>
+                        <span style={{ bg: theme.secondary, fg: theme.background }}>
+                          {directory ? " Directory " : " File "}
+                        </span>
                         <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
                       </text>
                     )
@@ -1138,20 +1167,18 @@ function UserMessage(props: {
               </box>
             </Show>
             <text fg={theme.textMuted}>
-              {ctx.usernameVisible() ? `${sync.data.config.username ?? "You "}` : "You "}
               <Show
                 when={queued()}
                 fallback={
                   <Show when={ctx.showTimestamps()}>
                     <span style={{ fg: theme.textMuted }}>
-                      {ctx.usernameVisible() ? " · " : " "}
                       {Locale.todayTimeOrDateTime(props.message.time.created)}
                     </span>
                   </Show>
                 }
               >
                 <span> </span>
-                <span style={{ bg: theme.accent, fg: theme.backgroundPanel, bold: true }}> QUEUED </span>
+                <span style={{ bg: color(), fg: theme.background, bold: true }}> QUEUED </span>
               </Show>
             </text>
           </box>
@@ -1288,21 +1315,85 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   )
 }
 
+function splitFences(text: string) {
+  const parts: { kind: "prose" | "code"; lang: string; text: string }[] = []
+  let cursor = 0
+  while (cursor < text.length) {
+    const open = text.indexOf("```", cursor)
+    if (open === -1) {
+      const rest = text.slice(cursor).trim()
+      if (rest) parts.push({ kind: "prose", lang: "markdown", text: rest })
+      break
+    }
+    const before = text.slice(cursor, open).trim()
+    if (before) parts.push({ kind: "prose", lang: "markdown", text: before })
+    const lineEnd = text.indexOf("\n", open + 3)
+    const close = text.indexOf("```", open + 3)
+    const header = text.slice(open + 3, lineEnd === -1 ? text.length : lineEnd)
+    const lang = header.trim().split(/\s+/)[0] || "text"
+    if (close === -1) {
+      const inner = lineEnd === -1 ? "" : text.slice(lineEnd + 1)
+      parts.push({ kind: "code", lang, text: inner })
+      break
+    }
+    const innerStart = lineEnd === -1 ? open + 3 : lineEnd + 1
+    const inner = text.slice(Math.min(innerStart, close), close).replace(/\n$/, "")
+    parts.push({ kind: "code", lang, text: inner })
+    cursor = close + 3
+  }
+  return parts
+}
+
 function TextPart(props: { last: boolean; part: TextPart; message: AssistantMessage }) {
   const ctx = use()
   const { theme, syntax } = useTheme()
+  const blocks = createMemo(() => splitFences(props.part.text.trim()))
   return (
     <Show when={props.part.text.trim()}>
-      <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
-        <code
-          filetype="markdown"
-          drawUnstyledText={false}
-          streaming={true}
-          syntaxStyle={syntax()}
-          content={props.part.text.trim()}
-          conceal={ctx.conceal()}
-          fg={theme.text}
-        />
+      <box id={"text-" + props.part.id} paddingLeft={1} marginTop={1} flexShrink={0}>
+        <Show when={props.last || !props.part.time?.end}>
+          <text fg={theme.primary} attributes={TextAttributes.BOLD}>
+            ARENA
+          </text>
+        </Show>
+        <For each={blocks()}>
+          {(block) => (
+            <Show
+              when={block.kind === "code"}
+              fallback={
+                <code
+                  filetype="markdown"
+                  drawUnstyledText={false}
+                  streaming={true}
+                  syntaxStyle={syntax()}
+                  content={block.text}
+                  conceal={ctx.conceal()}
+                  fg={theme.text}
+                />
+              }
+            >
+              <box
+                marginTop={1}
+                border={["left"]}
+                borderColor={theme.primary}
+                customBorderChars={SplitBorder.customBorderChars}
+                paddingLeft={1}
+                backgroundColor={theme.backgroundPanel}
+              >
+                <code
+                  filetype={block.lang}
+                  drawUnstyledText={true}
+                  streaming={true}
+                  syntaxStyle={syntax()}
+                  content={block.text}
+                  conceal={ctx.conceal()}
+                  fg={theme.text}
+                  bg={theme.backgroundPanel}
+                />
+              </box>
+            </Show>
+          )}
+        </For>
       </box>
     </Show>
   )
