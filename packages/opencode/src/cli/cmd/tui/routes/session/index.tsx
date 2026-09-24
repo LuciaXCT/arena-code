@@ -1117,7 +1117,7 @@ function UserMessage(props: {
             <text fg={theme.warning}>●</text>
             <text fg={theme.text} attributes={TextAttributes.BOLD}>YOU</text>
             <text fg={theme.textMuted}>○</text>
-            <text fg={theme.textMuted}>{formatTimeAgo ? "" : ""}</text>
+            <text fg={theme.textMuted}>○</text>
           </box>
           {/* workstation shadow */}
           <box flexDirection="column" gap={0}>

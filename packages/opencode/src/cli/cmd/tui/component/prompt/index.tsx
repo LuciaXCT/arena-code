@@ -746,7 +746,7 @@ export function Prompt(props: PromptProps) {
       <box ref={(r) => (anchor = r)} visible={props.visible !== false}>
         <box
           border={["left"]}
-          borderColor={props.sessionID ? highlight() : theme.backgroundPanel}
+          borderColor={props.sessionID ? highlight() : theme.primary}
           customBorderChars={{
             ...EmptyBorder,
             vertical: "┃",
@@ -955,7 +955,7 @@ export function Prompt(props: PromptProps) {
         <box
           height={1}
           border={["left"]}
-          borderColor={props.sessionID ? highlight() : theme.backgroundPanel}
+          borderColor={props.sessionID ? highlight() : theme.primary}
           customBorderChars={{
             ...EmptyBorder,
             vertical: theme.backgroundElement.a !== 0 ? "╹" : " ",
@@ -964,7 +964,7 @@ export function Prompt(props: PromptProps) {
           <box
             height={1}
             border={["bottom"]}
-            borderColor={props.sessionID ? theme.backgroundElement : theme.backgroundPanel}
+            borderColor={props.sessionID ? theme.backgroundElement : theme.primary}
             customBorderChars={
               theme.backgroundElement.a !== 0
                 ? {

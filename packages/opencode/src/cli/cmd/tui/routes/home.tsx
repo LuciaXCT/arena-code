@@ -93,26 +93,23 @@ export function Home() {
           <box marginTop={1} flexDirection="row" gap={1}>
             <text fg={theme.textMuted}>Sessions · {recentSessions().length}</text>
           </box>
-          <box flexDirection="column" gap={1} flexGrow={1}>
+          <box flexDirection="column" gap={0} flexGrow={1}>
             <For each={recentSessions()}>{(s) => {
-              const title = ((s as any).title || "New session").slice(0, 12)
+              const title = ((s as any).title || "New session").slice(0, 10)
               const age = timeAgo(s.time.updated)
-              const sid = s.id.slice(0, 6)
+              const sid = s.id.slice(0, 5)
               return (
-                <box flexDirection="column" paddingLeft={1} paddingTop={0} paddingBottom={1} border={["bottom"]} borderColor={theme.borderSubtle}>
-                  <box flexDirection="row" gap={1}>
-                    <text fg={theme.textMuted}>○</text>
-                    <text fg={theme.text}>{title}</text>
-                  </box>
-                  <box paddingLeft={2}>
-                    <text fg={theme.textMuted}>{age} · {sid}</text>
-                  </box>
+                <box flexDirection="row" gap={1} paddingLeft={1} paddingTop={0} paddingBottom={1} border={["bottom"]} borderColor={theme.borderSubtle}>
+                  <text fg={theme.textMuted}>○</text>
+                  <text fg={theme.text}>{title}</text>
+                  <text fg={theme.textMuted}>· {age}</text>
+                  <text fg={theme.textMuted}>· {sid}</text>
                 </box>
               )
             }}</For>
           </box>
           <box flexDirection="row" gap={1}>
-            <text fg={theme.textMuted}>○ {directory().toString().slice(0, 16)}</text>
+            <text fg={theme.textMuted}>○ {directory().toString().slice(0, 14)}</text>
           </box>
         </box>
       </Show>
@@ -124,15 +121,15 @@ export function Home() {
           <text fg={theme.textMuted}>· {versionText} · ○ ● ●</text>
         </box>
 
-        <box flexDirection="column" width="70%" maxWidth={70} border={["top","bottom","left","right"]} borderColor={theme.primary} customBorderChars={Rounded} backgroundColor={theme.backgroundPanel} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1}>
+        <box flexDirection="column" width="70%" maxWidth={68} backgroundColor={theme.backgroundPanel} paddingLeft={1} paddingRight={1} paddingTop={0} paddingBottom={0}>
           <Prompt ref={(r) => { prompt = r; promptRef.set(r) }} />
         </box>
 
-        <box flexDirection="row" gap={2} justifyContent="center" marginTop={1}>
+        <box flexDirection="row" gap={1} justifyContent="center" marginTop={1}>
           <text fg={theme.textMuted}>○ tab agent · ⌘P search · ⌘L sessions</text>
         </box>
 
-        <box flexDirection="row" gap={1} flexWrap="wrap" justifyContent="center" maxWidth={70} marginTop={1}>
+        <box flexDirection="row" gap={1} flexWrap="wrap" justifyContent="center" maxWidth={68} marginTop={1}>
           <For each={CHIPS}>{(chip) => (
             <box paddingLeft={1} paddingRight={1} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} backgroundColor={theme.backgroundElement} customBorderChars={Rounded} onMouseUp={() => prompt?.set({ input: `Build a ${chip}`, parts: [] })}>
               <text fg={theme.textMuted}>○ {chip}</text>
@@ -141,21 +138,17 @@ export function Home() {
         </box>
 
         <Show when={recentSessions().length > 0}>
-          <box flexDirection="column" width="70%" maxWidth={70} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1} marginTop={1}>
+          <box flexDirection="column" width="70%" maxWidth={68} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={0} marginTop={1}>
             <For each={recentSessions().slice(0,3)}>{(s) => {
-              const title = ((s as any).title || "New session").slice(0, 18)
-              const sidShort = s.id.slice(0, 8)
+              const title = ((s as any).title || "New session").slice(0, 14)
+              const sidShort = s.id.slice(0, 6)
               const age = timeAgo(s.time.updated)
               return (
-                <box flexDirection="column" gap={0}>
-                  <box flexDirection="row" gap={1}>
-                    <text fg={theme.textMuted}>○</text>
-                    <text fg={theme.text}>{title}</text>
-                    <text fg={theme.textMuted}>· {age}</text>
-                  </box>
-                  <box paddingLeft={2}>
-                    <text fg={theme.primary}>opencode -s {sidShort}</text>
-                  </box>
+                <box flexDirection="row" gap={1} paddingTop={0} paddingBottom={0}>
+                  <text fg={theme.textMuted}>○</text>
+                  <text fg={theme.text}>{title}</text>
+                  <text fg={theme.textMuted}>· {age}</text>
+                  <text fg={theme.primary}>· {sidShort}</text>
                 </box>
               )
             }}</For>
