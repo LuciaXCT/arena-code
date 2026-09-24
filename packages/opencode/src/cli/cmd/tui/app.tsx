@@ -14,6 +14,7 @@ import { DialogModel, useConnected } from "@tui/component/dialog-model"
 import { DialogMcp } from "@tui/component/dialog-mcp"
 import { DialogPlugin } from "@tui/component/dialog-plugin"
 import { ComparePrompt } from "@tui/component/dialog-compare"
+import { DialogPrompt } from "@tui/ui/dialog-prompt"
 import { DialogStatus } from "@tui/component/dialog-status"
 import { DialogThemeList } from "@tui/component/dialog-theme-list"
 import { DialogHelp } from "./ui/dialog-help"
@@ -24,6 +25,7 @@ import { KeybindProvider } from "@tui/context/keybind"
 import { ThemeProvider, useTheme } from "@tui/context/theme"
 import { Home } from "@tui/routes/home"
 import { Session } from "@tui/routes/session"
+import { Council } from "@tui/routes/council"
 import { PromptHistoryProvider } from "./component/prompt/history"
 import { FrecencyProvider } from "./component/prompt/frecency"
 import { PromptStashProvider } from "./component/prompt/stash"
@@ -367,6 +369,30 @@ function App() {
         dialog.replace(() => <DialogMcp />)
       },
     },
+    {
+      title: "Council: brainstorm vs critic",
+      value: "council.run",
+      category: "Agent",
+      onSelect: () => {
+        dialog.replace(() => (
+          <DialogPrompt
+            title="Council question"
+            placeholder="Ask something worth arguing about"
+            onConfirm={async (text) => {
+              const question = text.trim()
+              if (!question) return
+              const session = await sdk.client.session.create({ title: `Council: ${question.slice(0, 40)}` })
+              if (session.error || !session.data) {
+                toast.error(session.error ?? "Could not create council session")
+                return
+              }
+              route.navigate({ type: "council", sessionID: session.data.id, prompt: question })
+              dialog.clear()
+            }}
+          />
+        ))
+      },
+    },
     ...(Flag.isArena()
       ? [
           {
@@ -393,6 +419,7 @@ function App() {
               dialog.replace(() => <ComparePrompt mode="side-by-side" />)
             },
           },
+
         ]
       : []),
     {
@@ -668,6 +695,9 @@ function App() {
         </Match>
         <Match when={route.data.type === "session"}>
           <Session />
+        </Match>
+        <Match when={route.data.type === "council"}>
+          <Council />
         </Match>
       </Switch>
     </box>
