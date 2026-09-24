@@ -1,11 +1,8 @@
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import { createMemo, For, Match, onMount, Show, Switch } from "solid-js"
+import { createMemo, For, onMount, Show } from "solid-js"
 import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
-import { Logo } from "../component/logo"
-import { DidYouKnow, randomizeTip } from "../component/did-you-know"
-import { Locale } from "@/util/locale"
-import { useSync } from "../context/sync"
+import { useSync } from "@tui/context/sync"
 import { Toast } from "../ui/toast"
 import { useArgs } from "../context/args"
 import { useDirectory } from "../context/directory"
@@ -15,6 +12,9 @@ import { Installation } from "@/installation"
 import { Flag } from "@/flag/flag"
 import { useKV } from "../context/kv"
 import { useCommandDialog } from "../component/dialog-command"
+import { useDialog } from "@tui/ui/dialog"
+import { DialogSessionList } from "../component/dialog-session-list"
+import { useTerminalDimensions } from "@opentui/solid"
 
 let once = false
 
@@ -44,77 +44,176 @@ export function Home() {
   const route = useRouteData("home")
   const promptRef = usePromptRef()
   const command = useCommandDialog()
+  const dialog = useDialog()
+  const dimensions = useTerminalDimensions()
+  const wide = createMemo(() => dimensions().width > 110)
+
   const mcp = createMemo(() => Object.keys(sync.data.mcp).length > 0)
-  const mcpError = createMemo(() => Object.values(sync.data.mcp).some((x) => x.status === "failed"))
   const connectedMcpCount = createMemo(() => Object.values(sync.data.mcp).filter((x) => x.status === "connected").length)
   const isFirstTimeUser = createMemo(() => sync.data.session.length === 0)
-  const tipsHidden = createMemo(() => kv.get("tips_hidden", false))
-  const showTips = createMemo(() => { return false; if (isFirstTimeUser()) return false; return !tipsHidden() })
 
   const recentSessions = createMemo(() => {
     const list = sync.data.session
     if (!list || list.length === 0) return []
-    return list.filter((x) => (x as any).parentID === undefined).toSorted((a, b) => b.time.updated - a.time.updated).slice(0, 5)
+    return list.filter((x) => (x as any).parentID === undefined).toSorted((a, b) => b.time.updated - a.time.updated).slice(0, 10)
   })
 
-  command.register(() => [{ title: tipsHidden() ? "Show tips" : "Hide tips", value: "tips.toggle", keybind: "tips_toggle", category: "System", onSelect: (dialog) => { kv.set("tips_hidden", !tipsHidden()); dialog.clear() } }])
-
-  const Hint = (<Show when={connectedMcpCount() > 0}><box flexShrink={0} flexDirection="row" gap={1}><text fg={theme.text}><Switch><Match when={mcpError()}><span style={{ fg: theme.error }}>•</span> mcp errors{" "}<span style={{ fg: theme.textMuted }}>ctrl+x s</span></Match><Match when={true}><span style={{ fg: theme.success }}>•</span>{" "}{Locale.pluralize(connectedMcpCount(), "{} mcp server", "{} mcp servers")}</Match></Switch></text></box></Show>)
+  const Hint = (
+    <Show when={connectedMcpCount() > 0}>
+      <box flexShrink={0} flexDirection="row" gap={1}>
+        <text fg={theme.textMuted}>• {connectedMcpCount()} MCP · /status</text>
+      </box>
+    </Show>
+  )
 
   let prompt: PromptRef
   const args = useArgs()
   const router = useRoute()
   onMount(() => {
-    randomizeTip()
     if (once) return
     if (route.initialPrompt) { prompt.set(route.initialPrompt); once = true }
     else if (args.prompt) { prompt.set({ input: args.prompt, parts: [] }); once = true; prompt.submit() }
   })
   const directory = useDirectory()
 
+  const versionText = Flag.isArena() ? (process.env.ARENA_VERSION ?? Installation.VERSION) : Installation.VERSION
+
   return (
     <>
-      <box flexGrow={1} justifyContent="center" alignItems="center" paddingLeft={2} paddingRight={2} gap={1}>
-        <Logo />
-        <box alignItems="center" flexShrink={0} marginBottom={1} width="100%">
-          <text fg={theme.text} attributes={TextAttributes.BOLD}>What can I build for you?</text>
-          <text fg={theme.textMuted}>Interact with Arena Code and explore the boundless creative world</text>
-        </box>
-        <box width="100%" maxWidth={90} zIndex={1000} paddingTop={1} flexDirection="column" gap={1}>
-          <Prompt ref={(r) => { prompt = r; promptRef.set(r) }} hint={Hint} />
-          <box flexDirection="row" gap={1} justifyContent="center" flexWrap="wrap" marginTop={2}>
-            <For each={chips}>{([label, text]) => (<box border={["top","bottom","left","right"]} borderColor={theme.border} paddingLeft={1} paddingRight={1} backgroundColor={theme.backgroundElement} onMouseUp={() => prompt?.set({ input: text, parts: [] })}><text fg={theme.textMuted}>{label}</text></box>)}</For>
-          </box>
-          <Show when={recentSessions().length > 0}>
-            <box flexDirection="column" gap={1} marginTop={3} width="100%">
-              <box flexDirection="row" gap={1} alignItems="center" marginBottom={1}>
-                <text fg={theme.text} attributes={TextAttributes.BOLD}>Recent Sessions</text>
-                <text fg={theme.textMuted}>· {recentSessions().length} · /sessions · ctrl+x l</text>
+      {/* MAIN LAYOUT ROW */}
+      <box flexDirection="row" flexGrow={1} width="100%" height="100%">
+        {/* SIDEBAR - arena.ai style: New Chat, Search, Sessions */}
+        <Show when={wide()}>
+          <box width={32} flexShrink={0} flexDirection="column" backgroundColor={theme.backgroundPanel} border={["right"]} borderColor={theme.borderSubtle} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1}>
+            {/* Sidebar Header */}
+            <box flexDirection="row" alignItems="center" justifyContent="space-between" paddingLeft={1} paddingRight={1} marginBottom={1}>
+              <box flexDirection="row" gap={1} alignItems="center">
+                <text fg={theme.text} attributes={TextAttributes.BOLD}>arena</text>
+                <text fg={theme.textMuted}>code</text>
               </box>
-              <For each={recentSessions()}>{(sess) => (
-                <box flexDirection="column" gap={0} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} backgroundColor={theme.backgroundElement} onMouseUp={() => router.navigate({ type: "session", sessionID: sess.id })}>
-                  <box flexDirection="row" gap={1}>
-                    <text fg={theme.textMuted}>Session</text>
-                    <text fg={theme.text}>{((sess as any).title || (sess as any).summary || sess.id).toString().slice(0, 24)}</text>
-                  </box>
-                  <box flexDirection="row" gap={1} marginTop={1}>
-                    <text fg={theme.textMuted}>{formatTimeAgo(sess.time.updated)}</text>
-                    <text fg={theme.textMuted}>·</text>
-                    <text fg={theme.textMuted}>Continue</text>
-                    <text fg={theme.accent}>opencode -s {sess.id.slice(0, 16)}...</text>
-                  </box>
-                </box>
-              )}</For>
+              <text fg={theme.textMuted}>{versionText}</text>
             </box>
-          </Show>
+
+            {/* New Chat - primary */}
+            <box flexDirection="column" gap={1} paddingLeft={1} paddingRight={1}>
+              <box backgroundColor={theme.primary} paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1} flexDirection="row" gap={1} alignItems="center" justifyContent="center" onMouseUp={() => router.navigate({ type: "home" })}>
+                <text fg={theme.background} attributes={TextAttributes.BOLD}>+ New Chat</text>
+              </box>
+              {/* Search - opens command palette */}
+              <box border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} backgroundColor={theme.backgroundElement} paddingLeft={2} paddingRight={1} paddingTop={1} paddingBottom={1} flexDirection="row" gap={1} alignItems="center" onMouseUp={() => command.show()}>
+                <text fg={theme.textMuted}>⌕ Search</text>
+                <box flexGrow={1} />
+                <text fg={theme.textMuted}>ctrl+p</text>
+              </box>
+            </box>
+
+            {/* Sessions */}
+            <box flexDirection="column" gap={1} marginTop={1} flexGrow={1}>
+              <box flexDirection="row" gap={1} paddingLeft={1} paddingRight={1} alignItems="center">
+                <text fg={theme.text} attributes={TextAttributes.BOLD}>Sessions</text>
+                <text fg={theme.textMuted}>· {recentSessions().length}</text>
+                <box flexGrow={1} />
+                <text fg={theme.textMuted}>/sessions</text>
+              </box>
+
+              <Show when={recentSessions().length === 0}>
+                <box paddingLeft={1} paddingRight={1} paddingTop={1}>
+                  <text fg={theme.textMuted}>No sessions yet</text>
+                </box>
+              </Show>
+
+              <box flexDirection="column" gap={0} flexGrow={1}>
+                <For each={recentSessions()}>{(sess) => (
+                  <box flexDirection="column" gap={0} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} backgroundColor={theme.backgroundPanel} onMouseUp={() => router.navigate({ type: "session", sessionID: sess.id })}>
+                    <text fg={theme.text}>{((sess as any).title || (sess as any).summary || sess.id).toString().slice(0, 28)}</text>
+                    <box flexDirection="row" gap={1}>
+                      <text fg={theme.textMuted}>{formatTimeAgo(sess.time.updated)}</text>
+                      <text fg={theme.textMuted}>·</text>
+                      <text fg={theme.textMuted}>{sess.id.slice(0, 12)}</text>
+                    </box>
+                  </box>
+                )}</For>
+              </box>
+            </box>
+
+            {/* Footer */}
+            <box flexDirection="column" gap={0} paddingLeft={1} paddingRight={1} border={["top"]} borderColor={theme.borderSubtle} paddingTop={1} marginTop={1}>
+              <text fg={theme.textMuted}>{directory()}</text>
+              <Show when={mcp()}>
+                <text fg={theme.textMuted}>{connectedMcpCount()} MCP</text>
+              </Show>
+            </box>
+          </box>
+        </Show>
+
+        {/* MAIN CENTER - minimal */}
+        <box flexGrow={1} justifyContent="center" alignItems="center" paddingLeft={2} paddingRight={2} gap={1} flexDirection="column">
+          <box width="100%" maxWidth={72} flexDirection="column" gap={2} alignItems="center" justifyContent="center" flexGrow={1}>
+            {/* Minimal logo - no block ASCII, just text */}
+            <box alignItems="center" flexDirection="column" gap={0} marginBottom={1} width="100%">
+              <box flexDirection="row" gap={1} alignItems="center" justifyContent="center">
+                <text fg={theme.textMuted}>✦</text>
+                <text fg={theme.text} attributes={TextAttributes.BOLD}>arena</text>
+                <text fg={theme.textMuted}>code</text>
+                <text fg={theme.textMuted}>· {versionText}</text>
+              </box>
+              <box height={1} />
+              <text fg={theme.text} attributes={TextAttributes.BOLD}>What can I build for you?</text>
+              <text fg={theme.textMuted}>Interact with Arena Code and explore the boundless creative world</text>
+            </box>
+
+            <box width="100%" zIndex={1000} flexDirection="column" gap={1}>
+              <Prompt ref={(r) => { prompt = r; promptRef.set(r) }} hint={Hint} />
+              <box flexDirection="row" gap={1} justifyContent="center" marginTop={1}>
+                <text fg={theme.textMuted}>tab</text>
+                <text fg={theme.textMuted}>switch agent</text>
+                <text fg={theme.textMuted}>·</text>
+                <text fg={theme.textMuted}>ctrl+p</text>
+                <text fg={theme.textMuted}>commands</text>
+                <text fg={theme.textMuted}>·</text>
+                <text fg={theme.textMuted}>ctrl+x l</text>
+                <text fg={theme.textMuted}>sessions</text>
+              </box>
+              {/* Minimal chips - pill, no heavy border */}
+              <box flexDirection="row" gap={1} justifyContent="center" flexWrap="wrap" marginTop={2}>
+                <For each={chips}>{([label, text]) => (
+                  <box paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1} backgroundColor={theme.backgroundElement} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} onMouseUp={() => prompt?.set({ input: text, parts: [] })}>
+                    <text fg={theme.textMuted}>{label}</text>
+                  </box>
+                )}</For>
+              </box>
+
+              {/* Narrow terminal fallback: show sessions in main when no sidebar */}
+              <Show when={!wide() && recentSessions().length > 0}>
+                <box flexDirection="column" gap={1} marginTop={3} width="100%">
+                  <box flexDirection="row" gap={1} alignItems="center">
+                    <text fg={theme.text} attributes={TextAttributes.BOLD}>Recent</text>
+                    <text fg={theme.textMuted}>· {recentSessions().length} · /sessions</text>
+                  </box>
+                  <For each={recentSessions().slice(0,5)}>{(sess) => (
+                    <box flexDirection="row" gap={1} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} backgroundColor={theme.backgroundElement} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} onMouseUp={() => router.navigate({ type: "session", sessionID: sess.id })}>
+                      <text fg={theme.textMuted}>{formatTimeAgo(sess.time.updated)}</text>
+                      <text fg={theme.text}>{((sess as any).title || sess.id).toString().slice(0, 20)}</text>
+                    </box>
+                  )}</For>
+                </box>
+              </Show>
+            </box>
+          </box>
+
+          {/* Bottom bar minimal */}
+          <box width="100%" maxWidth={72} flexDirection="row" gap={1} paddingTop={1} paddingBottom={1} flexShrink={0}>
+            <Show when={!wide()}>
+              <text fg={theme.textMuted}>{directory()} · {versionText}</text>
+            </Show>
+            <Show when={wide()}>
+              <box flexGrow={1} />
+              <text fg={theme.textMuted}>new chat keeps sessions alive · no close needed</text>
+            </Show>
+          </box>
+
+          <Toast />
         </box>
-        <Toast />
-      </box>
-      <Show when={!isFirstTimeUser()}><Show when={showTips()}><DidYouKnow /></Show></Show>
-      <box paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2} flexDirection="row" flexShrink={0} gap={2}>
-        <text fg={theme.textMuted}>{directory()}</text>
-        <box gap={1} flexDirection="row" flexShrink={0}><Show when={mcp()}><text fg={theme.text}><Switch><Match when={mcpError()}><span style={{ fg: theme.error }}>⊙ </span></Match><Match when={true}><span style={{ fg: connectedMcpCount() > 0 ? theme.success : theme.textMuted }}>⊙ </span></Match></Switch>{connectedMcpCount()} MCP</text><text fg={theme.textMuted}>/status</text></Show></box>
-        <box flexGrow={1} /><box flexShrink={0}><text fg={theme.textMuted}>{Flag.isArena() ? (process.env.ARENA_VERSION ?? Installation.VERSION) : Installation.VERSION}</text></box>
       </box>
     </>
   )
