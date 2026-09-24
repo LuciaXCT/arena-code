@@ -57,7 +57,6 @@ import { DialogConfirm } from "@tui/ui/dialog-confirm"
 import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
-import { Sidebar } from "./sidebar"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import parsers from "../../../../../../parsers-config.ts"
 import { Clipboard } from "../../util/clipboard"
@@ -132,8 +131,7 @@ export function Session() {
   })
 
   const dimensions = useTerminalDimensions()
-  const [sidebar, setSidebar] = createSignal<"show" | "hide" | "auto">(kv.get("sidebar", "auto"))
-  const [conceal, setConceal] = createSignal(true)
+    const [conceal, setConceal] = createSignal(true)
   const [showThinking, setShowThinking] = createSignal(kv.get("thinking_visibility", false))
   const [showTimestamps, setShowTimestamps] = createSignal(kv.get("timestamps", "hide") === "show")
   const [usernameVisible, setUsernameVisible] = createSignal(kv.get("username_visible", true))
@@ -144,13 +142,7 @@ export function Session() {
   const [animationsEnabled, setAnimationsEnabled] = createSignal(kv.get("animations_enabled", true))
 
   const wide = createMemo(() => dimensions().width > 120)
-  const sidebarVisible = createMemo(() => {
-    if (session()?.parentID) return false
-    if (sidebar() === "show") return true
-    if (sidebar() === "auto" && wide()) return true
-    return false
-  })
-  const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
+    const contentWidth = createMemo(() => dimensions().width - 4)
 
   const scrollAcceleration = createMemo(() => {
     const tui = sync.data.config.tui
@@ -442,22 +434,6 @@ export function Session() {
           sessionID: route.sessionID,
           messageID: message.id,
         })
-      },
-    },
-    {
-      title: sidebarVisible() ? "Hide sidebar" : "Show sidebar",
-      value: "session.sidebar.toggle",
-      keybind: "sidebar_toggle",
-      category: "Session",
-      onSelect: (dialog) => {
-        setSidebar((prev) => {
-          if (prev === "auto") return sidebarVisible() ? "hide" : "show"
-          if (prev === "show") return "hide"
-          return "show"
-        })
-        if (sidebar() === "show") kv.set("sidebar", "auto")
-        if (sidebar() === "hide") kv.set("sidebar", "hide")
-        dialog.clear()
       },
     },
     {
@@ -915,15 +891,13 @@ export function Session() {
       }}
     >
       <box flexDirection="row">
-        <Show when={sidebarVisible() && wide()}>
-          <Sidebar sessionID={route.sessionID} />
-        </Show>
+        
         <box flexGrow={1} minHeight={0} alignItems="center">
         <box width="100%" flexGrow={1} paddingBottom={1} paddingTop={1} paddingLeft={3} paddingRight={3} gap={1}>
           <Show when={session()}>
-            <Show when={!sidebarVisible()}>
+            
               <Header />
-            </Show>
+            
             <scrollbox
               ref={(r) => (scroll = r)}
               viewportOptions={{
@@ -1055,26 +1029,14 @@ export function Session() {
                 sessionID={route.sessionID}
               />
             </box>
-            <Show when={!sidebarVisible()}>
+            
               <Footer />
-            </Show>
+            
           </Show>
           <Toast />
         </box>
         </box>
-        <Show when={sidebarVisible() && !wide()}>
-          <box
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            bottom={0}
-            alignItems="flex-end"
-            backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
-          >
-            <Sidebar sessionID={route.sessionID} />
-          </box>
-        </Show>
+        
       </box>
     </context.Provider>
   )
@@ -1126,7 +1088,7 @@ function UserMessage(props: {
           id={props.message.id}
           marginTop={props.index === 0 ? 0 : 1}
           marginRight="auto"
-          width="70%"
+          width="65%"
         >
           <text fg={theme.textMuted} attributes={TextAttributes.BOLD} paddingLeft={1}>
             YOU
