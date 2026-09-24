@@ -1,148 +1,58 @@
-import { type Accessor, createMemo, Match, Show, Switch } from "solid-js"
+import { createMemo, Show } from "solid-js"
 import { useRouteData } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
-import { pipe, sumBy } from "remeda"
 import { useTheme } from "@tui/context/theme"
-import { SplitBorder, EmptyBorder } from "@tui/component/border"
 
-const Rounded = {
-  topLeft: "╭",
-  topRight: "╮",
-  bottomLeft: "╰",
-  bottomRight: "╯",
-  horizontal: "─",
-  vertical: "│",
-  topT: "┬",
-  bottomT: "┴",
-  leftT: "├",
-  rightT: "┤",
-  cross: "┼",
-}
-import type { AssistantMessage, Session } from "@opencode-ai/sdk/v2"
-import { useDirectory } from "../../context/directory"
-import { useKeybind } from "../../context/keybind"
-
-const Title = (props: { session: Accessor<Session> }) => {
-  const { theme } = useTheme()
-  return (
-    <box flexDirection="row" gap={1} alignItems="center">
-      <text fg={theme.error}>●</text>
-      <text fg={theme.warning}>●</text>
-      <text fg={theme.success}>●</text>
-      <text fg={theme.textMuted}>○</text>
-      <text fg={theme.text}>
-        <span style={{ bold: true }}>{props.session().title}</span>
-      </text>
-    </box>
-  )
-}
-
-const ContextInfo = (props: { context: Accessor<string | undefined>; cost: Accessor<string> }) => {
-  const { theme } = useTheme()
-  return (
-    <Show when={props.context()}>
-      <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
-        {props.context()} ({props.cost()})
-      </text>
-    </Show>
-  )
+function timeAgo(iso: string | number) {
+  const ms = typeof iso === "number" ? iso : new Date(iso).getTime()
+  const d = Date.now() - ms
+  const m = Math.floor(d / 60000)
+  if (m < 1) return "now"
+  if (m < 60) return `${m}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h/24)}d`
 }
 
 export function Header() {
   const route = useRouteData("session")
   const sync = useSync()
+  const { theme } = useTheme()
   const session = createMemo(() => sync.session.get(route.sessionID)!)
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
-  const shareEnabled = createMemo(() => sync.data.config.share !== "disabled")
 
   const cost = createMemo(() => {
-    const total = pipe(
-      messages(),
-      sumBy((x) => (x.role === "assistant" ? x.cost : 0)),
-    )
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(total)
+    const total = messages().reduce((acc, x) => acc + (x.role === "assistant" ? (x as any).cost || 0 : 0), 0)
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(total)
   })
 
-  const context = createMemo(() => {
-    const last = messages().findLast((x) => x.role === "assistant" && x.tokens.output > 0) as AssistantMessage
-    if (!last) return
-    const total =
-      last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
-    const model = sync.data.provider.find((x) => x.id === last.providerID)?.models[last.modelID]
-    let result = total.toLocaleString()
-    if (model?.limit.context) {
-      result += "  " + Math.round((total / model.limit.context) * 100) + "%"
-    }
-    return result
+  const tokens = createMemo(() => {
+    const last = messages().findLast((x) => x.role === "assistant") as any
+    if (!last) return undefined
+    const t = last.tokens
+    if (!t) return undefined
+    return (t.input || 0) + (t.output || 0) + (t.reasoning || 0)
   })
 
-  const { theme } = useTheme()
-  const keybind = useKeybind()
+  const title = createMemo(() => (session()?.title || "New session").slice(0, 28))
+  const age = createMemo(() => timeAgo(session()?.time?.updated || Date.now()))
 
   return (
-    <box flexShrink={0} flexDirection="column" gap={0}>
-      <box backgroundColor={theme.background} border={["top","bottom","left","right"]} borderColor={theme.background} customBorderChars={Rounded} marginLeft={1} marginTop={1} paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={1}>
-        <text fg={theme.background}>shadow</text>
+    <box flexDirection="row" justifyContent="space-between" alignItems="center" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1} backgroundColor={theme.backgroundElement} border={["bottom"]} borderColor={theme.borderSubtle} flexShrink={0}>
+      <box flexDirection="row" gap={1} alignItems="center">
+        <text fg={theme.error}>●</text>
+        <text fg={theme.warning}>●</text>
+        <text fg={theme.success}>●</text>
+        <text fg={theme.textMuted}>○</text>
       </box>
-      <box
-        marginTop={-1}
-        paddingTop={1}
-        paddingBottom={1}
-        paddingLeft={2}
-        paddingRight={1}
-        border={["top","bottom","left","right"]}
-        borderColor={theme.borderSubtle}
-        customBorderChars={Rounded}
-        flexShrink={0}
-        backgroundColor={theme.backgroundPanel}
-      >
-        <Switch>
-          <Match when={session()?.parentID}>
-            <box flexDirection="row" gap={2}>
-              <text fg={theme.text}>
-                <b>Subagent session</b>
-              </text>
-              <text fg={theme.text}>
-                Parent <span style={{ fg: theme.textMuted }}>{keybind.print("session_parent")}</span>
-              </text>
-              <text fg={theme.text}>
-                Prev <span style={{ fg: theme.textMuted }}>{keybind.print("session_child_cycle_reverse")}</span>
-              </text>
-              <text fg={theme.text}>
-                Next <span style={{ fg: theme.textMuted }}>{keybind.print("session_child_cycle")}</span>
-              </text>
-              <box flexGrow={1} flexShrink={1} />
-              <ContextInfo context={context} cost={cost} />
-            </box>
-          </Match>
-          <Match when={true}>
-            <box flexDirection="row" justifyContent="space-between" gap={1}>
-              <Title session={session} />
-              <ContextInfo context={context} cost={cost} />
-            </box>
-            <Show when={shareEnabled()}>
-              <box flexDirection="row" justifyContent="space-between" gap={1}>
-                <box flexGrow={1} flexShrink={1}>
-                  <Switch>
-                    <Match when={session().share?.url}>
-                      <text fg={theme.textMuted} wrapMode="word">
-                        {session().share!.url}
-                      </text>
-                    </Match>
-                    <Match when={true}>
-                      <text fg={theme.text} wrapMode="word">
-                        /share <span style={{ fg: theme.textMuted }}>copy link</span>
-                      </text>
-                    </Match>
-                  </Switch>
-                </box>
-              </box>
-            </Show>
-          </Match>
-        </Switch>
+      <box flexDirection="row" gap={1} alignItems="center">
+        <text fg={theme.text} attributes={1}>{title()}</text>
+        <text fg={theme.textMuted}>·</text>
+        <text fg={theme.textMuted}>{age()}</text>
+      </box>
+      <box flexDirection="row" gap={2} alignItems="center">
+        <Show when={tokens()}>{(t) => <text fg={theme.textMuted}>{t().toLocaleString()} tok</text>}</Show>
+        <text fg={theme.primary}>{cost()}</text>
       </box>
     </box>
   )
