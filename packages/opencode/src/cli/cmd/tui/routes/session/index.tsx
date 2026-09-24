@@ -1027,22 +1027,28 @@ export function Session() {
                 )}
               </For>
             </scrollbox>
-            <box flexShrink={0}>
+            <box flexShrink={0} flexDirection="column" gap={0}>
               <Show when={permissions().length > 0}>
                 <PermissionPrompt request={permissions()[0]} />
               </Show>
-              <Prompt
-                visible={!session()?.parentID && permissions().length === 0}
-                ref={(r) => {
-                  prompt = r
-                  promptRef.set(r)
-                }}
-                disabled={permissions().length > 0}
-                onSubmit={() => {
-                  toBottom()
-                }}
-                sessionID={route.sessionID}
-              />
+              {/* realistic prompt with shadow + rounded */}
+              <box backgroundColor={theme.background} border={["top","bottom","left","right"]} borderColor={theme.background} customBorderChars={Rounded} marginLeft={1} marginTop={1} paddingTop={1} paddingBottom={1} paddingLeft={1} paddingRight={1}>
+                <text fg={theme.background}>.</text>
+              </box>
+              <box marginTop={-1} border={["top","bottom","left","right"]} borderColor={theme.border} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingTop={0} paddingBottom={0} paddingLeft={1} paddingRight={1}>
+                <Prompt
+                  visible={!session()?.parentID && permissions().length === 0}
+                  ref={(r) => {
+                    prompt = r
+                    promptRef.set(r)
+                  }}
+                  disabled={permissions().length > 0}
+                  onSubmit={() => {
+                    toBottom()
+                  }}
+                  sessionID={route.sessionID}
+                />
+              </box>
             </box>
             
               <Footer />
@@ -1066,6 +1072,7 @@ const MIME_BADGE: Record<string, string> = {
   "application/pdf": "pdf",
   "application/x-directory": "dir",
 }
+
 
 function UserMessage(props: {
   message: UserMessage
@@ -1093,7 +1100,6 @@ function UserMessage(props: {
   const [hover, setHover] = createSignal(false)
   const queued = createMemo(() => props.pending && props.message.id > props.pending)
   const color = createMemo(() => (queued() ? theme.accent : local.agent.color(props.message.agent)))
-
   const compaction = createMemo(() => props.parts.find((x) => x.type === "compaction"))
 
   return (
@@ -1101,73 +1107,54 @@ function UserMessage(props: {
       <Show when={text()}>
         <box
           id={props.message.id}
-          marginTop={props.index === 0 ? 1 : 1}
+          marginTop={1}
           marginRight="auto"
-          width="65%"
+          width="62%"
           flexDirection="column"
           gap={0}
         >
-          <box flexDirection="row" gap={1} alignItems="center" paddingLeft={1}>
+          <box flexDirection="row" gap={1} alignItems="center" paddingLeft={1} marginBottom={0}>
             <text fg={theme.warning}>●</text>
-            <text fg={theme.textMuted} attributes={TextAttributes.BOLD}>YOU</text>
+            <text fg={theme.text} attributes={TextAttributes.BOLD}>YOU</text>
             <text fg={theme.textMuted}>○</text>
+            <text fg={theme.textMuted}>{formatTimeAgo ? "" : ""}</text>
           </box>
-          {/* shadow layer */}
-          <box marginLeft={1} marginTop={1} backgroundColor={theme.background} border={["top","bottom","left","right"]} borderColor={theme.background} customBorderChars={Rounded} paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2}>
-            <text fg={theme.background}>{text().slice(0, 20)}</text>
-          </box>
-          <box
-            marginTop={-1}
-            onMouseOver={() => {
-              setHover(true)
-            }}
-            onMouseOut={() => {
-              setHover(false)
-            }}
-            onMouseUp={props.onMouseUp}
-            paddingTop={1}
-            paddingBottom={1}
-            paddingLeft={2}
-            paddingRight={2}
-            backgroundColor={hover() ? theme.accent : theme.backgroundElement}
-            border={["top","bottom","left","right"]}
-            borderColor={hover() ? theme.accent : theme.borderSubtle}
-            customBorderChars={Rounded}
-            flexShrink={0}
-          >
-            <text fg={theme.background}>{text()}</text>
-            <Show when={files().length}>
-              <box flexDirection="row" paddingBottom={1} paddingTop={1} gap={1} flexWrap="wrap">
-                <For each={files()}>
-                  {(file) => {
-                    const directory = file.mime === "application/x-directory"
-                    return (
-                      <text fg={theme.background}>
-                        <span style={{ bg: theme.background, fg: theme.secondary }}>
-                          {directory ? " Directory " : " File "}
-                        </span>
-                        <span style={{ bg: theme.textMuted, fg: theme.background }}> {file.filename} </span>
-                      </text>
-                    )
-                  }}
-                </For>
-              </box>
-            </Show>
-            <text fg={theme.diffContext}>
-              <Show
-                when={queued()}
-                fallback={
-                  <Show when={ctx.showTimestamps()}>
-                    <span style={{ fg: theme.textMuted }}>
-                      {Locale.todayTimeOrDateTime(props.message.time.created)}
-                    </span>
-                  </Show>
-                }
-              >
-                <span> </span>
-                <span style={{ bg: color(), fg: theme.background, bold: true }}> QUEUED </span>
+          {/* workstation shadow */}
+          <box flexDirection="column" gap={0}>
+            <box marginLeft={1} marginTop={0} backgroundColor={theme.background} border={["top","bottom","left","right"]} borderColor={theme.background} customBorderChars={Rounded} paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2}>
+              <text fg={theme.background}>.</text>
+            </box>
+            <box
+              marginTop={-1}
+              onMouseOver={() => setHover(true)}
+              onMouseOut={() => setHover(false)}
+              onMouseUp={props.onMouseUp}
+              paddingTop={1}
+              paddingBottom={1}
+              paddingLeft={2}
+              paddingRight={2}
+              backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
+              border={["top","bottom","left","right"]}
+              borderColor={hover() ? theme.primary : theme.borderSubtle}
+              customBorderChars={Rounded}
+              flexShrink={0}
+            >
+              <text fg={theme.text}>{text()}</text>
+              <Show when={files().length}>
+                <box flexDirection="row" paddingBottom={1} paddingTop={1} gap={1} flexWrap="wrap">
+                  <For each={files()}>
+                    {(file) => {
+                      const directory = file.mime === "application/x-directory"
+                      return (
+                        <box border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingLeft={1} paddingRight={1}>
+                          <text fg={theme.textMuted}>{directory ? "○ Dir" : "○ File"} {file.filename}</text>
+                        </box>
+                      )
+                    }}
+                  </For>
+                </box>
               </Show>
-            </text>
+            </box>
           </box>
         </box>
       </Show>
@@ -1175,7 +1162,7 @@ function UserMessage(props: {
         <box
           marginTop={1}
           border={["top"]}
-          title=" Compaction "
+          title=" ○ Compaction ○ "
           titleAlignment="center"
           borderColor={theme.borderActive}
         />
@@ -1183,6 +1170,7 @@ function UserMessage(props: {
     </>
   )
 }
+
 
 function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
   const local = useLocal()
@@ -1204,6 +1192,11 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
 
   return (
     <>
+      <box flexDirection="row" gap={1} alignItems="center" marginTop={1} paddingLeft={1}>
+        <text fg={theme.success}>●</text>
+        <text fg={theme.text} attributes={TextAttributes.BOLD}>ARENA</text>
+        <text fg={theme.textMuted}>○ {props.message.modelID ?? ""}</text>
+      </box>
       <For each={props.parts}>
         {(part, index) => {
           const component = createMemo(() => PART_MAPPING[part.type as keyof typeof PART_MAPPING])
