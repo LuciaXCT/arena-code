@@ -41,7 +41,7 @@ const Rounded = {
   cross: "┼",
 }
 
-const CHIPS = ["Landing Page", "Knowledge", "3D Modeling", "Mini Game", "Personal Blog"]
+const CHIPS = ["Landing Page", "Knowledge Base", "3D Modeling", "Mini Game", "Personal Blog", "Dashboard"]
 
 export function Home() {
   const sync = useSync()
@@ -50,12 +50,12 @@ export function Home() {
   const promptRef = usePromptRef()
   const command = useCommandDialog()
   const dimensions = useTerminalDimensions()
-  const wide = createMemo(() => dimensions().width > 95)
+  const wide = createMemo(() => dimensions().width > 100)
 
   const recentSessions = createMemo(() => {
     const list = sync.data.session
     if (!list || list.length === 0) return []
-    return list.filter((x) => (x as any).parentID === undefined).toSorted((a, b) => b.time.updated - a.time.updated).slice(0, 6)
+    return list.filter((x) => (x as any).parentID === undefined).toSorted((a, b) => b.time.updated - a.time.updated).slice(0, 8)
   })
 
   let prompt: PromptRef
@@ -75,52 +75,57 @@ export function Home() {
   return (
     <box flexDirection="row" width="100%" height="100%">
       <Show when={wide()}>
-        <box flexDirection="column" width={30} height="100%" backgroundColor={theme.backgroundElement} border={["right"]} borderColor={theme.borderSubtle} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1}>
+        <box flexDirection="column" width={32} height="100%" backgroundColor={theme.backgroundElement} border={["right"]} borderColor={theme.borderSubtle} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1}>
           <box flexDirection="row" gap={1} alignItems="center" paddingLeft={1}>
             <text fg={theme.error}>●</text>
             <text fg={theme.warning}>●</text>
             <text fg={theme.success}>●</text>
             <text fg={theme.textMuted}>○</text>
             <box flexGrow={1} />
-            <text fg={theme.textMuted}>◈</text>
+            <text fg={theme.primary}>◈</text>
           </box>
-          <box flexDirection="row" gap={1} marginTop={1} alignItems="center" paddingLeft={1}>
-            <text fg={theme.primary} attributes={TextAttributes.BOLD}>◈ arenacode</text>
-            <text fg={theme.textMuted}>· {versionText}</text>
+          <box flexDirection="column" gap={0} marginTop={1} paddingLeft={1}>
+            <box flexDirection="row" gap={1} alignItems="center">
+              <text fg={theme.primary} attributes={TextAttributes.BOLD}>◈ ARENA</text>
+              <text fg={theme.text} attributes={TextAttributes.BOLD}>CODE</text>
+            </box>
+            <text fg={theme.textMuted}>· {versionText} · nova-dark · ◈</text>
           </box>
-          <box marginTop={1} border={["top","bottom","left","right"]} borderColor={newChatHover() ? theme.accent : theme.primary} customBorderChars={Rounded} backgroundColor={newChatHover() ? theme.accentDim : theme.backgroundPanel} paddingLeft={1} paddingRight={1} justifyContent="center" alignItems="center" onMouseOver={() => setNewChatHover(true)} onMouseOut={() => setNewChatHover(false)} onMouseUp={() => router.navigate({ type: "home" })}>
-            <text fg={newChatHover() ? theme.text : theme.primary} attributes={TextAttributes.BOLD}>✦ New Chat</text>
+          <box marginTop={1} border={["top","bottom","left","right"]} borderColor={newChatHover() ? theme.accent : theme.primary} customBorderChars={Rounded} backgroundColor={newChatHover() ? theme.accentDim : theme.backgroundPanel} paddingLeft={1} paddingRight={1} paddingTop={0} paddingBottom={0} justifyContent="center" alignItems="center" onMouseOver={() => setNewChatHover(true)} onMouseOut={() => setNewChatHover(false)} onMouseUp={() => router.navigate({ type: "home" })}>
+            <text fg={newChatHover() ? theme.text : theme.primary} attributes={TextAttributes.BOLD}>✦ New Chat · ○</text>
           </box>
           <box border={["top","bottom","left","right"]} borderColor={searchHover() ? theme.primary : theme.borderSubtle} customBorderChars={Rounded} backgroundColor={searchHover() ? theme.backgroundPanel : theme.backgroundElement} paddingLeft={1} paddingRight={1} flexDirection="row" gap={1} alignItems="center" onMouseOver={() => setSearchHover(true)} onMouseOut={() => setSearchHover(false)} onMouseUp={() => command.show()}>
-            <text fg={searchHover() ? theme.primary : theme.textMuted}>○ Search</text>
+            <text fg={searchHover() ? theme.primary : theme.textMuted}>○ Search skills · agents</text>
             <box flexGrow={1} />
             <text fg={theme.textMuted}>⌘P</text>
           </box>
           <box marginTop={1} flexDirection="row" gap={1} alignItems="center" paddingLeft={1}>
-            <text fg={theme.text} attributes={TextAttributes.BOLD}>○ Sessions</text>
-            <text fg={theme.textMuted}>· {recentSessions().length} · /s</text>
+            <text fg={theme.text} attributes={TextAttributes.BOLD}>◈ Sessions</text>
+            <text fg={theme.textMuted}>· {recentSessions().length}</text>
+            <text fg={theme.textMuted}>· /s · Ctrl+XL</text>
           </box>
           <box flexDirection="column" gap={0} flexGrow={1}>
             <For each={recentSessions()}>{(s) => {
               const [hover, setHover] = createSignal(false)
-              const title = ((s as any).title || "New session").slice(0, 14)
+              const title = ((s as any).title || "New session").slice(0, 16)
               const age = timeAgo(s.time.updated)
-              const sid = s.id.slice(0, 6)
+              const sid = s.id.slice(0, 7)
               return (
                 <box flexDirection="column" gap={0} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} border={["bottom"]} borderColor={hover() ? theme.primary : theme.borderSubtle} backgroundColor={hover() ? theme.backgroundPanel : theme.backgroundElement} onMouseOver={() => setHover(true)} onMouseOut={() => setHover(false)} onMouseUp={() => router.navigate({ type: "session", sessionID: s.id })}>
                   <box flexDirection="row" gap={1} alignItems="center">
                     <text fg={hover() ? theme.primary : theme.textMuted}>{hover() ? "●" : "○"}</text>
                     <text fg={hover() ? theme.primary : theme.text} attributes={hover() ? TextAttributes.BOLD : 0}>{title}</text>
                   </box>
-                  <box paddingLeft={2}>
-                    <text fg={hover() ? theme.accent : theme.textMuted}>{age} · {sid} · ○</text>
+                  <box flexDirection="row" gap={1} paddingLeft={2} alignItems="center">
+                    <text fg={hover() ? theme.accent : theme.textMuted}>{age} · {sid} · ◈</text>
                   </box>
                 </box>
               )
             }}</For>
           </box>
-          <box flexDirection="row" gap={1} border={["top"]} borderColor={theme.borderSubtle} paddingTop={1} alignItems="center" paddingLeft={1}>
-            <text fg={theme.textMuted}>○ {directory().toString().slice(0, 18)} · ◈</text>
+          <box flexDirection="column" gap={0} border={["top"]} borderColor={theme.borderSubtle} paddingTop={1} paddingLeft={1}>
+            <text fg={theme.textMuted}>○ {directory().toString().slice(0, 20)}</text>
+            <text fg={theme.textMuted}>○ {versionText} · fit · ◈</text>
           </box>
         </box>
       </Show>
@@ -130,15 +135,15 @@ export function Home() {
         <box flexDirection="row" gap={1} alignItems="center" marginBottom={1} paddingLeft={2} paddingRight={2} paddingTop={0} paddingBottom={0} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} customBorderChars={Rounded} backgroundColor={theme.backgroundElement}>
           <text fg={theme.primary}>✦ arena</text>
           <text fg={theme.textMuted}>· {versionText}</text>
-          <text fg={theme.textMuted}>· nova-dark</text>
+          <text fg={theme.textMuted}>· nova-dark · orange-black</text>
           <text fg={theme.textMuted}>·</text>
           <text fg={theme.error}>●</text>
           <text fg={theme.warning}>●</text>
           <text fg={theme.success}>●</text>
-          <text fg={theme.textMuted}>○</text>
+          <text fg={theme.textMuted}>○ ◈</text>
         </box>
 
-        <box flexDirection="column" width="75%" maxWidth={80} backgroundColor={theme.backgroundPanel} border={["top","bottom","left","right"]} borderColor={theme.primary} customBorderChars={Rounded} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1}>
+        <box flexDirection="column" width="75%" maxWidth={82} backgroundColor={theme.backgroundPanel} border={["top","bottom","left","right"]} borderColor={theme.primary} customBorderChars={Rounded} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1}>
           <Prompt ref={(r) => { prompt = r; promptRef.set(r) }} />
         </box>
 
@@ -146,14 +151,14 @@ export function Home() {
           <text fg={theme.textMuted}>○ tab agent</text>
           <text fg={theme.textMuted}>· ⌘P search</text>
           <text fg={theme.textMuted}>· ⌘L sessions</text>
-          <text fg={theme.textMuted}>· ◈</text>
+          <text fg={theme.textMuted}>· ◈ aesthetic</text>
         </box>
 
-        <box flexDirection="row" gap={1} flexWrap="wrap" justifyContent="center" maxWidth={80} marginTop={1}>
+        <box flexDirection="row" gap={1} flexWrap="wrap" justifyContent="center" maxWidth={82} marginTop={1}>
           <For each={CHIPS}>{(chip) => {
             const [chipHover, setChipHover] = createSignal(false)
             return (
-              <box paddingLeft={2} paddingRight={2} paddingTop={0} paddingBottom={0} border={["top","bottom","left","right"]} borderColor={chipHover() ? theme.primary : theme.borderSubtle} backgroundColor={chipHover() ? theme.backgroundPanel : theme.backgroundElement} customBorderChars={Rounded} onMouseOver={() => setChipHover(true)} onMouseOut={() => setChipHover(false)} onMouseUp={() => prompt?.set({ input: `Build a beautiful ${chip} with modern aesthetic and orange-black theme`, parts: [] })}>
+              <box paddingLeft={2} paddingRight={2} paddingTop={0} paddingBottom={0} border={["top","bottom","left","right"]} borderColor={chipHover() ? theme.primary : theme.borderSubtle} backgroundColor={chipHover() ? theme.backgroundPanel : theme.backgroundElement} customBorderChars={Rounded} onMouseOver={() => setChipHover(true)} onMouseOut={() => setChipHover(false)} onMouseUp={() => prompt?.set({ input: `Build a beautiful ${chip} with modern aesthetic, orange-black nova-dark theme, clean typography`, parts: [] })}>
                 <text fg={chipHover() ? theme.primary : theme.textMuted}>○ {chip}</text>
               </box>
             )
@@ -161,14 +166,14 @@ export function Home() {
         </box>
 
         <Show when={recentSessions().length > 0}>
-          <box flexDirection="column" width="75%" maxWidth={80} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1} marginTop={1}>
+          <box flexDirection="column" width="75%" maxWidth={82} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1} marginTop={1}>
             <box flexDirection="row" gap={1} alignItems="center" marginBottom={0}>
-              <text fg={theme.primary}>◈ Recent Sessions</text>
-              <text fg={theme.textMuted}>· {recentSessions().length} · ○ ● ●</text>
+              <text fg={theme.primary} attributes={TextAttributes.BOLD}>◈ Recent Sessions</text>
+              <text fg={theme.textMuted}>· {recentSessions().length} · restore · ○ ● ●</text>
             </box>
-            <For each={recentSessions().slice(0,3)}>{(s) => {
+            <For each={recentSessions().slice(0,4)}>{(s) => {
               const [hover, setHover] = createSignal(false)
-              const title = ((s as any).title || "New session").slice(0, 18)
+              const title = ((s as any).title || "New session").slice(0, 20)
               const sidShort = s.id.slice(0, 8)
               const age = timeAgo(s.time.updated)
               return (
@@ -178,8 +183,9 @@ export function Home() {
                     <text fg={hover() ? theme.primary : theme.text} attributes={hover() ? TextAttributes.BOLD : 0}>{title}</text>
                     <text fg={theme.textMuted}>· {age}</text>
                   </box>
-                  <box paddingLeft={2}>
-                    <text fg={hover() ? theme.accent : theme.primary}>opencode -s {sidShort} · ◈</text>
+                  <box paddingLeft={2} flexDirection="row" gap={1} alignItems="center">
+                    <text fg={hover() ? theme.accent : theme.primary}>opencode -s {sidShort}</text>
+                    <text fg={theme.textMuted}>· ◈ {sidShort}</text>
                   </box>
                 </box>
               )
@@ -188,7 +194,7 @@ export function Home() {
         </Show>
 
         <box marginTop={1} flexDirection="row" gap={1} alignItems="center">
-          <text fg={theme.textMuted}>○ {versionText} · nova-dark · aesthetic · clickable colour · fit · no garble · ◈</text>
+          <text fg={theme.textMuted}>○ {versionText} · nova-dark #0A0A0A #FF5500 · aesthetic · clickable colour · fit · no garble · best UI forever · ◈</text>
         </box>
         <Toast />
       </box>
