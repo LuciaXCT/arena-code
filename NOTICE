@@ -1,0 +1,49 @@
+Arena Code — attribution notice
+================================
+
+Arena Code is a fork of opencode.
+
+Upstream
+--------
+opencode
+Copyright (c) 2025 opencode
+License: MIT
+Source: https://github.com/sst/opencode
+
+The upstream MIT license and copyright notice are retained verbatim in
+LICENSE at the root of this repository, as required by the MIT License
+("The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software").
+
+Documentation theme
+-------------------
+The bundled documentation theme derives from Mintlify's docs starter.
+Copyright (c) 2023 Mintlify — License: MIT.
+See packages/docs/LICENSE.
+
+Modifications in this fork
+--------------------------
+Arena Code modifies the upstream work. The material changes are:
+
+- Renamed product and CLI surface to Arena Code / arena.
+- Custom TUI: home layout, session view, council route, taskbar.
+- Themes: arena-soft, arena-code, arena-emerald, arena-noir, nova-dark.
+- Free-model provider routing (9router, Kilo Code) and a rotating
+  free-model selector plugin.
+- Localized build/version string (OPENCODE_VERSION).
+
+Copyright in the above modifications is held by the Arena Code authors.
+The upstream copyright in the unmodified portions remains with its owners.
+
+Trademarks
+----------
+"opencode" and any associated marks belong to their respective owners.
+Arena Code is an independent fork and is not affiliated with, sponsored by,
+or endorsed by the opencode project. The upstream name and logo are not used
+to identify this fork's product or to suggest endorsement.
+
+Redistribution
+--------------
+If you redistribute a binary or bundle of Arena Code, include the LICENSE
+and this NOTICE file with it. Both are required to satisfy the MIT terms for
+the portions derived from upstream.

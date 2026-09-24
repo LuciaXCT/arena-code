@@ -458,6 +458,20 @@ Publishing safety:
 
 MIT — see [LICENSE](LICENSE).
 
+## Attribution
+
+Arena Code is a fork of [opencode](https://github.com/sst/opencode), which is
+MIT licensed, Copyright (c) 2025 opencode. The upstream license and copyright
+notice are retained in [LICENSE](LICENSE). See [NOTICE](NOTICE) for the full
+attribution and the list of changes made in this fork.
+
+The bundled documentation theme derives from Mintlify's docs starter, MIT
+licensed, Copyright (c) 2023 Mintlify — see `packages/docs/LICENSE`.
+
+opencode and any associated marks belong to their respective owners. Arena
+Code is an independent fork and is not affiliated with, sponsored by, or
+endorsed by the opencode project.
+
 ## Author
 
 **Pawbxj** — [@pawbxj/arena-cli](https://github.com/k1ruuuu/arena-cli)

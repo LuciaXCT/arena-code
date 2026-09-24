@@ -6,6 +6,7 @@ import { useTheme } from "@tui/context/theme"
 import { Logo, OldBanner } from "../component/logo"
 import { useSync } from "../context/sync"
 import { Toast } from "../ui/toast"
+import { Taskbar } from "../component/taskbar"
 import { useArgs } from "../context/args"
 import { useDirectory } from "../context/directory"
 import { useRoute, useRouteData } from "@tui/context/route"
@@ -325,6 +326,7 @@ export function Home() {
           <Toast />
         </box>
       </box>
+      <Taskbar />
     </box>
   )
 }

@@ -65,7 +65,7 @@ import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import { Editor } from "../../util/editor"
 import stripAnsi from "strip-ansi"
-import { Footer } from "./footer.tsx"
+import { Taskbar } from "@tui/component/taskbar"
 import { usePromptRef } from "../../context/prompt"
 import { useExit } from "../../context/exit"
 import { Filesystem } from "@/util/filesystem"
@@ -1056,7 +1056,7 @@ export function Session() {
               />
             </box>
             <Show when={!sidebarVisible()}>
-              <Footer />
+              <Taskbar />
             </Show>
           </Show>
           <Toast />
