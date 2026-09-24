@@ -4,6 +4,7 @@ import {
   createMemo,
   createSignal,
   For,
+  Index,
   Match,
   on,
   Show,
@@ -918,7 +919,7 @@ export function Session() {
           <Sidebar sessionID={route.sessionID} />
         </Show>
         <box flexGrow={1} minHeight={0} alignItems="center">
-        <box width="100%" maxWidth={78} flexGrow={1} paddingBottom={1} paddingTop={1} paddingLeft={2} paddingRight={2} gap={1}>
+        <box width="100%" flexGrow={1} paddingBottom={1} paddingTop={1} paddingLeft={3} paddingRight={3} gap={1}>
           <Show when={session()}>
             <Show when={!sidebarVisible()}>
               <Header />
@@ -1123,13 +1124,13 @@ function UserMessage(props: {
       <Show when={text()}>
         <box
           id={props.message.id}
+          border={["left"]}
+          borderColor={theme.primary}
+          customBorderChars={SplitBorder.customBorderChars}
           marginTop={props.index === 0 ? 0 : 1}
-          marginRight="auto"
+          marginLeft="auto"
           width="70%"
         >
-          <text fg={theme.textMuted} attributes={TextAttributes.BOLD} paddingLeft={1}>
-            YOU
-          </text>
           <box
             onMouseOver={() => {
               setHover(true)
@@ -1141,29 +1142,31 @@ function UserMessage(props: {
             paddingTop={1}
             paddingBottom={1}
             paddingLeft={2}
-            paddingRight={2}
-            backgroundColor={hover() ? theme.accent : theme.secondary}
+            backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
             flexShrink={0}
           >
-            <text fg={theme.background}>{text()}</text>
+            <text fg={theme.textMuted} attributes={TextAttributes.BOLD}>
+              YOU
+            </text>
+            <text fg={theme.text}>{text()}</text>
             <Show when={files().length}>
               <box flexDirection="row" paddingBottom={1} paddingTop={1} gap={1} flexWrap="wrap">
                 <For each={files()}>
                   {(file) => {
                     const directory = file.mime === "application/x-directory"
                     return (
-                      <text fg={theme.background}>
-                        <span style={{ bg: theme.background, fg: theme.secondary }}>
+                      <text fg={theme.text}>
+                        <span style={{ bg: theme.secondary, fg: theme.background }}>
                           {directory ? " Directory " : " File "}
                         </span>
-                        <span style={{ bg: theme.textMuted, fg: theme.background }}> {file.filename} </span>
+                        <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
                       </text>
                     )
                   }}
                 </For>
               </box>
             </Show>
-            <text fg={theme.diffContext}>
+            <text fg={theme.textMuted}>
               <Show
                 when={queued()}
                 fallback={
@@ -1353,17 +1356,17 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
             ARENA
           </text>
         </Show>
-        <For each={blocks()}>
+        <Index each={blocks()}>
           {(block) => (
             <Show
-              when={block.kind === "code"}
+              when={block().kind === "code"}
               fallback={
                 <code
                   filetype="markdown"
                   drawUnstyledText={false}
                   streaming={true}
                   syntaxStyle={syntax()}
-                  content={block.text}
+                  content={block().text}
                   conceal={ctx.conceal()}
                   fg={theme.text}
                 />
@@ -1378,11 +1381,11 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
                 backgroundColor={theme.backgroundPanel}
               >
                 <code
-                  filetype={block.lang}
+                  filetype={block().lang}
                   drawUnstyledText={true}
                   streaming={true}
                   syntaxStyle={syntax()}
-                  content={block.text}
+                  content={block().text}
                   conceal={ctx.conceal()}
                   fg={theme.text}
                   bg={theme.backgroundPanel}
@@ -1390,7 +1393,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
               </box>
             </Show>
           )}
-        </For>
+        </Index>
       </box>
     </Show>
   )
