@@ -4,6 +4,20 @@ import { useSync } from "@tui/context/sync"
 import { pipe, sumBy } from "remeda"
 import { useTheme } from "@tui/context/theme"
 import { SplitBorder, EmptyBorder } from "@tui/component/border"
+
+const Rounded = {
+  topLeft: "╭",
+  topRight: "╮",
+  bottomLeft: "╰",
+  bottomRight: "╯",
+  horizontal: "─",
+  vertical: "│",
+  topT: "┬",
+  bottomT: "┴",
+  leftT: "├",
+  rightT: "┤",
+  cross: "┼",
+}
 import type { AssistantMessage, Session } from "@opencode-ai/sdk/v2"
 import { useDirectory } from "../../context/directory"
 import { useKeybind } from "../../context/keybind"
@@ -11,9 +25,15 @@ import { useKeybind } from "../../context/keybind"
 const Title = (props: { session: Accessor<Session> }) => {
   const { theme } = useTheme()
   return (
-    <text fg={theme.text}>
-      <span style={{ bold: true }}>#</span> <span style={{ bold: true }}>{props.session().title}</span>
-    </text>
+    <box flexDirection="row" gap={1} alignItems="center">
+      <text fg={theme.error}>●</text>
+      <text fg={theme.warning}>●</text>
+      <text fg={theme.success}>●</text>
+      <text fg={theme.textMuted}>○</text>
+      <text fg={theme.text}>
+        <span style={{ bold: true }}>{props.session().title}</span>
+      </text>
+    </box>
   )
 }
 
@@ -63,15 +83,19 @@ export function Header() {
   const keybind = useKeybind()
 
   return (
-    <box flexShrink={0}>
+    <box flexShrink={0} flexDirection="column" gap={0}>
+      <box backgroundColor={theme.background} border={["top","bottom","left","right"]} borderColor={theme.background} customBorderChars={Rounded} marginLeft={1} marginTop={1} paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={1}>
+        <text fg={theme.background}>shadow</text>
+      </box>
       <box
+        marginTop={-1}
         paddingTop={1}
         paddingBottom={1}
         paddingLeft={2}
         paddingRight={1}
-        {...SplitBorder}
-        border={["left"]}
-        borderColor={theme.border}
+        border={["top","bottom","left","right"]}
+        borderColor={theme.borderSubtle}
+        customBorderChars={Rounded}
         flexShrink={0}
         backgroundColor={theme.backgroundPanel}
       >

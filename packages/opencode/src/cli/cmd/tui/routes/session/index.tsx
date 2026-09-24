@@ -74,6 +74,21 @@ import { formatTranscript } from "../../util/transcript"
 
 addDefaultParsers(parsers.parsers)
 
+const Rounded = {
+  topLeft: "╭",
+  topRight: "╮",
+  bottomLeft: "╰",
+  bottomRight: "╯",
+  horizontal: "─",
+  vertical: "│",
+  topT: "┬",
+  bottomT: "┴",
+  leftT: "├",
+  rightT: "┤",
+  cross: "┼",
+}
+
+
 class CustomSpeedScroll implements ScrollAcceleration {
   constructor(private speed: number) {}
 
@@ -1086,14 +1101,23 @@ function UserMessage(props: {
       <Show when={text()}>
         <box
           id={props.message.id}
-          marginTop={props.index === 0 ? 0 : 1}
+          marginTop={props.index === 0 ? 1 : 1}
           marginRight="auto"
           width="65%"
+          flexDirection="column"
+          gap={0}
         >
-          <text fg={theme.textMuted} attributes={TextAttributes.BOLD} paddingLeft={1}>
-            YOU
-          </text>
+          <box flexDirection="row" gap={1} alignItems="center" paddingLeft={1}>
+            <text fg={theme.warning}>●</text>
+            <text fg={theme.textMuted} attributes={TextAttributes.BOLD}>YOU</text>
+            <text fg={theme.textMuted}>○</text>
+          </box>
+          {/* shadow layer */}
+          <box marginLeft={1} marginTop={1} backgroundColor={theme.background} border={["top","bottom","left","right"]} borderColor={theme.background} customBorderChars={Rounded} paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2}>
+            <text fg={theme.background}>{text().slice(0, 20)}</text>
+          </box>
           <box
+            marginTop={-1}
             onMouseOver={() => {
               setHover(true)
             }}
@@ -1105,7 +1129,10 @@ function UserMessage(props: {
             paddingBottom={1}
             paddingLeft={2}
             paddingRight={2}
-            backgroundColor={hover() ? theme.accent : theme.secondary}
+            backgroundColor={hover() ? theme.accent : theme.backgroundElement}
+            border={["top","bottom","left","right"]}
+            borderColor={hover() ? theme.accent : theme.borderSubtle}
+            customBorderChars={Rounded}
             flexShrink={0}
           >
             <text fg={theme.background}>{text()}</text>
