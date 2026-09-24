@@ -1123,7 +1123,6 @@ function UserMessage(props: {
       <Show when={text()}>
         <box
           id={props.message.id}
-          ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
           border={["left"]}
           borderColor={theme.primary}
           customBorderChars={SplitBorder.customBorderChars}
