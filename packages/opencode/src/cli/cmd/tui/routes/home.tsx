@@ -76,17 +76,17 @@ export function Home() {
     <>
       <box flexGrow={1} justifyContent="center" alignItems="center" paddingLeft={2} paddingRight={2} gap={1}>
         <Logo />
-        <box alignItems="center" flexShrink={0} marginBottom={1}>
+        <box alignItems="center" flexShrink={0} marginBottom={1} width="100%">
           <text fg={theme.text} attributes={TextAttributes.BOLD}>What can I build for you?</text>
           <text fg={theme.textMuted}>Interact with Arena Code and explore the boundless creative world</text>
         </box>
-        <box width="100%" maxWidth={80} zIndex={1000} paddingTop={1} flexDirection="column" gap={1}>
+        <box width="100%" maxWidth={90} zIndex={1000} paddingTop={1} flexDirection="column" gap={1}>
           <Prompt ref={(r) => { prompt = r; promptRef.set(r) }} hint={Hint} />
-          <box flexDirection="row" gap={1} justifyContent="center" flexWrap="wrap" marginTop={1}>
+          <box flexDirection="row" gap={1} justifyContent="center" flexWrap="wrap" marginTop={2}>
             <For each={chips}>{([label, text]) => (<box border={["top","bottom","left","right"]} borderColor={theme.border} paddingLeft={1} paddingRight={1} backgroundColor={theme.backgroundElement} onMouseUp={() => prompt?.set({ input: text, parts: [] })}><text fg={theme.textMuted}>{label}</text></box>)}</For>
           </box>
           <Show when={recentSessions().length > 0}>
-            <box flexDirection="column" gap={1} marginTop={2} width="100%">
+            <box flexDirection="column" gap={1} marginTop={3} width="100%">
               <box flexDirection="row" gap={1} alignItems="center" marginBottom={1}>
                 <text fg={theme.text} attributes={TextAttributes.BOLD}>Recent Sessions</text>
                 <text fg={theme.textMuted}>· {recentSessions().length} · /sessions · ctrl+x l</text>
