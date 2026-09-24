@@ -1,5 +1,5 @@
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import { createMemo, For, Match, onMount, Show, Switch } from "solid-js"
+import { createEffect, createMemo, createSignal, For, Match, onMount, Show, Switch } from "solid-js"
 import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
 import { Logo } from "../component/logo"
@@ -25,17 +25,6 @@ const chips = [
   ["Write Code", "Look at this repo and implement the next obvious fix."],
 ] as const
 
-function formatTimeAgo(ms: number) {
-  const sec = Math.floor((Date.now() - ms) / 1000)
-  if (sec < 60) return `${sec}s ago`
-  const min = Math.floor(sec / 60)
-  if (min < 60) return `${min}m ago`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h ago`
-  const day = Math.floor(hr / 24)
-  return `${day}d ago`
-}
-
 export function Home() {
   const sync = useSync()
   const kv = useKV()
@@ -56,18 +45,9 @@ export function Home() {
   const tipsHidden = createMemo(() => kv.get("tips_hidden", false))
   const showTips = createMemo(() => {
     return false
+    // Don't show tips for first-time users
     if (isFirstTimeUser()) return false
     return !tipsHidden()
-  })
-
-  // Restore point: recent sessions like default opencode — Session list + Continue opencode -s ses_...
-  const recentSessions = createMemo(() => {
-    const list = sync.data.session
-    if (!list || list.length === 0) return []
-    return list
-      .filter((x) => (x as any).parentID === undefined)
-      .toSorted((a, b) => b.time.updated - a.time.updated)
-      .slice(0, 5)
   })
 
   command.register(() => [
@@ -105,6 +85,19 @@ export function Home() {
   let prompt: PromptRef
   const args = useArgs()
   const router = useRoute()
+  const [resumed, setResumed] = createSignal(false)
+  createEffect(() => {
+    if (resumed()) return
+    if (route.initialPrompt || args.prompt) return
+    const list = sync.data.session
+    if (!list || list.length === 0) return
+    const latest = list
+      .filter((x) => x.parentID === undefined)
+      .toSorted((a, b) => b.time.updated - a.time.updated)[0]
+    if (!latest) return
+    setResumed(true)
+    router.navigate({ type: "session", sessionID: latest.id })
+  })
   onMount(() => {
     randomizeTip()
     if (once) return
@@ -153,47 +146,6 @@ export function Home() {
               )}
             </For>
           </box>
-
-          {/* Restore point: Session list like default opencode — Continue opencode -s ses_... */}
-          <Show when={recentSessions().length > 0}>
-            <box flexDirection="column" gap={1} marginTop={2} width="100%">
-              <box flexDirection="row" gap={1} alignItems="center">
-                <text fg={theme.text} attributes={TextAttributes.BOLD}>Recent Sessions</text>
-                <text fg={theme.textMuted}>· {recentSessions().length} · /sessions · ctrl+x l</text>
-              </box>
-              <For each={recentSessions()}>
-                {(sess) => (
-                  <box
-                    flexDirection="row"
-                    gap={1}
-                    paddingLeft={1}
-                    paddingRight={1}
-                    paddingTop={1}
-                    paddingBottom={1}
-                    border={["top", "bottom", "left", "right"]}
-                    borderColor={theme.borderSubtle}
-                    backgroundColor={theme.backgroundElement}
-                    onMouseUp={() => router.navigate({ type: "session", sessionID: sess.id })}
-                  >
-                    <box flexDirection="column" flexGrow={1} gap={0}>
-                      <box flexDirection="row" gap={1}>
-                        <text fg={theme.textMuted}>Session</text>
-                        <text fg={theme.text}>{(sess as any).title || (sess as any).summary || sess.id.slice(0, 12)}</text>
-                        <text fg={theme.textMuted}>{formatTimeAgo(sess.time.updated)}</text>
-                      </box>
-                      <box flexDirection="row" gap={1}>
-                        <text fg={theme.textMuted}>Continue</text>
-                        <text fg={theme.accent}>opencode -s {sess.id}</text>
-                      </box>
-                    </box>
-                    <box flexShrink={0} alignItems="center" justifyContent="center">
-                      <text fg={theme.primary}>↩</text>
-                    </box>
-                  </box>
-                )}
-              </For>
-            </box>
-          </Show>
         </box>
         <Toast />
       </box>
