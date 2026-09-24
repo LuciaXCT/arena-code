@@ -2,11 +2,10 @@ import { TextAttributes } from "@opentui/core"
 import { For } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 
-// OLD BANNER compact - original ARENA CODE block but tight spacing
 const LOGO_COMPACT = [
-  " ▄▄▄  ▄▄▄▄  ▄▄▄▄▄ ▄▄  ▄▄  ▄▄▄     ▄▄▄▄  ▄▄▄  ▄▄▄▄  ▄▄▄▄▄",
-  "██▀██ ██▄█▄ ██▄▄  ███▄██ ██▀██   ██▀▀▀ ██▀██ ██▀██ ██▄▄",
-  "██▀██ ██ ██ ██▄▄▄ ██ ▀██ ██▀██   ▀████ ▀███▀ ████▀ ██▄▄▄",
+  " █▀▀█ █▀█ █▀▀ █▀█ █▀▀   █▀▀ █▀█ █▀▄ █▀▀",
+  " █  █ █▀█ █▀▀ █ █ █     █   █ █ █ █ █▀▀",
+  " ▀▀▀▀ ▀ ▀ ▀▀▀ ▀ ▀ ▀▀▀   ▀▀▀ ▀▀▀ ▀▀  ▀▀▀",
 ]
 
 export function Logo() {
