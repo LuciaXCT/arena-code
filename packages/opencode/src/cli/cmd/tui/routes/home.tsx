@@ -1,5 +1,5 @@
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import { createMemo, For, Match, onMount, Show, Switch } from "solid-js"
+import { createEffect, createMemo, createSignal, For, Match, onMount, Show, Switch } from "solid-js"
 import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
 import { Logo } from "../component/logo"
@@ -9,7 +9,7 @@ import { useSync } from "../context/sync"
 import { Toast } from "../ui/toast"
 import { useArgs } from "../context/args"
 import { useDirectory } from "../context/directory"
-import { useRouteData } from "@tui/context/route"
+import { useRoute, useRouteData } from "@tui/context/route"
 import { usePromptRef } from "../context/prompt"
 import { Installation } from "@/installation"
 import { Flag } from "@/flag/flag"
@@ -84,6 +84,20 @@ export function Home() {
 
   let prompt: PromptRef
   const args = useArgs()
+  const router = useRoute()
+  const [resumed, setResumed] = createSignal(false)
+  createEffect(() => {
+    if (resumed()) return
+    if (route.initialPrompt || args.prompt) return
+    const list = sync.data.session
+    if (!list || list.length === 0) return
+    const latest = list
+      .filter((x) => x.parentID === undefined)
+      .toSorted((a, b) => b.time.updated - a.time.updated)[0]
+    if (!latest) return
+    setResumed(true)
+    router.navigate({ type: "session", sessionID: latest.id })
+  })
   onMount(() => {
     randomizeTip()
     if (once) return

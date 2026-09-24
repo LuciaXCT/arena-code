@@ -1124,13 +1124,13 @@ function UserMessage(props: {
       <Show when={text()}>
         <box
           id={props.message.id}
-          border={["left"]}
-          borderColor={theme.primary}
-          customBorderChars={SplitBorder.customBorderChars}
           marginTop={props.index === 0 ? 0 : 1}
-          marginLeft="auto"
+          marginRight="auto"
           width="70%"
         >
+          <text fg={theme.textMuted} attributes={TextAttributes.BOLD} paddingLeft={1}>
+            YOU
+          </text>
           <box
             onMouseOver={() => {
               setHover(true)
@@ -1142,31 +1142,29 @@ function UserMessage(props: {
             paddingTop={1}
             paddingBottom={1}
             paddingLeft={2}
-            backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
+            paddingRight={2}
+            backgroundColor={hover() ? theme.accent : theme.secondary}
             flexShrink={0}
           >
-            <text fg={theme.textMuted} attributes={TextAttributes.BOLD}>
-              YOU
-            </text>
-            <text fg={theme.text}>{text()}</text>
+            <text fg={theme.background}>{text()}</text>
             <Show when={files().length}>
               <box flexDirection="row" paddingBottom={1} paddingTop={1} gap={1} flexWrap="wrap">
                 <For each={files()}>
                   {(file) => {
                     const directory = file.mime === "application/x-directory"
                     return (
-                      <text fg={theme.text}>
-                        <span style={{ bg: theme.secondary, fg: theme.background }}>
+                      <text fg={theme.background}>
+                        <span style={{ bg: theme.background, fg: theme.secondary }}>
                           {directory ? " Directory " : " File "}
                         </span>
-                        <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
+                        <span style={{ bg: theme.textMuted, fg: theme.background }}> {file.filename} </span>
                       </text>
                     )
                   }}
                 </For>
               </box>
             </Show>
-            <text fg={theme.textMuted}>
+            <text fg={theme.diffContext}>
               <Show
                 when={queued()}
                 fallback={
