@@ -20,9 +20,11 @@ import { useCommandDialog } from "../component/dialog-command"
 let once = false
 
 const chips = [
-  ["Magic Design", "Design this with one accent, a clear headline, and no clutter."],
-  ["Full-Stack", "Build the smallest full-stack version of this, with a test."],
-  ["Write Code", "Look at this repo and implement the next obvious fix."],
+  ["Landing Page", "Design a modern landing page with one accent, a clear headline, and no clutter."],
+  ["Teaching Material", "Turn this topic into clear teaching material with examples and a short quiz."],
+  ["3D Modeling", "Scaffold an interactive 3D scene with code I can run."],
+  ["Mini Game", "Build a small playable mini-game with simple controls and a score."],
+  ["Personal Blog", "Build a clean personal blog with a post list and an about page."],
 ] as const
 
 export function Home() {
@@ -106,7 +108,15 @@ export function Home() {
           <text fg={theme.text} attributes={TextAttributes.BOLD}>
             What can I build for you?
           </text>
-          <text fg={theme.textMuted}>Interact with Arena Code</text>
+          <text fg={theme.textMuted}>Interact with Arena Code and explore the boundless creative world</text>
+        </box>
+        <box flexDirection="row" gap={1} flexShrink={0} marginBottom={1}>
+          <box border={["top", "bottom", "left", "right"]} borderColor={theme.borderActive} paddingLeft={1} paddingRight={1}>
+            <text fg={theme.primary}>✦ Deep Think</text>
+          </box>
+          <box border={["top", "bottom", "left", "right"]} borderColor={theme.border} paddingLeft={1} paddingRight={1}>
+            <text fg={theme.textMuted}>Max</text>
+          </box>
         </box>
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1}>
           <Prompt
@@ -116,7 +126,7 @@ export function Home() {
             }}
             hint={Hint}
           />
-          <box flexDirection="row" gap={1} justifyContent="center" marginTop={1}>
+          <box flexDirection="row" gap={1} justifyContent="center" marginTop={1} flexWrap="wrap">
             <For each={chips}>
               {([label, text]) => (
                 <box
