@@ -1,6 +1,6 @@
 import { TextAttributes } from "@opentui/core"
 import { useTerminalDimensions } from "@opentui/solid"
-import { For } from "solid-js"
+import { For, Show } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 
 // "ARENA CODE" as a fixed-width half-block wordmark. Every glyph is 5 cells
@@ -13,34 +13,43 @@ const BANNER_BIG = [
   "█  █ █  █ █▄▄▄ █ ██ █  █     ▀▄▄▄ ▀▄▄▀ █▄▄▀ █▄▄▄",
 ]
 
-// Same glyphs, no inter-letter gap, for panes too narrow for the full mark.
-const BANNER_SMALL = [
-  "▄▀▀▄█▀▀▄█▀▀▀█  █▄▀▀▄▄▀▀▀▄▀▀▄█▀▀▄█▀▀▀",
-  "█▄▄██▄▄▀█▀▀ ██ ██▄▄██   █  ██  ██▀▀ ",
-  "█  ██  ██▄▄▄█ ███  █▀▄▄▄▀▄▄▀█▄▄▀█▄▄▄",
-]
+// Narrow panes get a plain tag rather than a squeezed wordmark - too narrow
+// for block letters, and a second ASCII variant is just another thing to
+// keep aligned.
+const BANNER_MARK = "◆"
+const BANNER_WORD = "ARENA CODE"
 
 // `flexShrink={0}` is load-bearing: without it the parent flex column shrinks
 // the box and the lines overdraw each other into unreadable glyph soup.
 export function OldBanner() {
   const { theme } = useTheme()
   const dimensions = useTerminalDimensions()
-  const lines = () => (dimensions().width >= 56 ? BANNER_BIG : BANNER_SMALL)
-  // Pad to this banner's own width - padding to the other one would shift it.
-  const width = () => Math.max(...lines().map((line) => line.length))
+  const wide = () => dimensions().width >= 56
+  // Pad to the banner's own width - uneven rows centre independently and drift.
+  const width = () => Math.max(...BANNER_BIG.map((line) => line.length))
   return (
     <box flexDirection="column" alignItems="center" justifyContent="center" gap={0} width="100%" flexShrink={0}>
-      <For each={lines()}>
-        {(line, index) => (
-          <text
-            fg={index() === 2 ? theme.secondary : theme.primary}
-            attributes={TextAttributes.BOLD}
-            selectable={false}
-          >
-            {line.padEnd(width(), " ")}
+      <Show
+        when={wide()}
+        fallback={
+          <text selectable={false}>
+            <span style={{ fg: theme.secondary }}>{BANNER_MARK} </span>
+            <span style={{ fg: theme.primary, bold: true }}>{BANNER_WORD}</span>
           </text>
-        )}
-      </For>
+        }
+      >
+        <For each={BANNER_BIG}>
+          {(line, index) => (
+            <text
+              fg={index() === 2 ? theme.secondary : theme.primary}
+              attributes={TextAttributes.BOLD}
+              selectable={false}
+            >
+              {line.padEnd(width(), " ")}
+            </text>
+          )}
+        </For>
+      </Show>
     </box>
   )
 }
