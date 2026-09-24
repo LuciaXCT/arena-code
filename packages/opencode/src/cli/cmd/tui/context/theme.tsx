@@ -6,6 +6,7 @@ import { createSimpleContext } from "./helper"
 import { Flag } from "@/flag/flag"
 import arenaCode from "./theme/arena-code.json" with { type: "json" }
 import arenaSoft from "./theme/arena-soft.json" with { type: "json" }
+import novaDark from "./theme/nova-dark.json" with { type: "json" }
 import aura from "./theme/aura.json" with { type: "json" }
 import ayu from "./theme/ayu.json" with { type: "json" }
 import catppuccin from "./theme/catppuccin.json" with { type: "json" }
@@ -142,6 +143,7 @@ type ThemeJson = {
 export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   ["arena-code"]: arenaCode,
   ["arena-soft"]: arenaSoft,
+  ["nova-dark"]: novaDark,
   aura,
   ayu,
   catppuccin,
@@ -287,7 +289,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     const [store, setStore] = createStore({
       themes: DEFAULT_THEMES,
       mode: kv.get("theme_mode", props.mode),
-      active: (sync.data.config.theme ?? kv.get("theme", "opencode")) as string,
+      active: (sync.data.config.theme ?? kv.get("theme", "nova-dark")) as string,
       ready: false,
     })
 
@@ -307,7 +309,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
           )
         })
         .catch(() => {
-          setStore("active", "opencode")
+          setStore("active", "nova-dark")
         })
         .finally(() => {
           if (store.active !== "system") {
@@ -327,7 +329,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
             if (store.active === "system") {
               setStore(
                 produce((draft) => {
-                  draft.active = "opencode"
+                  draft.active = "nova-dark"
                   draft.ready = true
                 }),
               )
@@ -354,7 +356,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     })
 
     const values = createMemo(() => {
-      return resolveTheme(store.themes[store.active] ?? store.themes["arena-code"] ?? store.themes.opencode, store.mode)
+      return resolveTheme(store.themes[store.active] ?? store.themes["nova-dark"] ?? store.themes["arena-code"] ?? store.themes.opencode, store.mode)
     })
 
     const syntax = createMemo(() => generateSyntax(values()))

@@ -634,12 +634,8 @@ function App() {
   })
 
   sdk.event.on(Installation.Event.UpdateAvailable.type, (evt) => {
-    toast.show({
-      variant: "info",
-      title: "Update Available",
-      message: `${Flag.ARENA ? "arena.ai" : "OpenCode"} v${evt.properties.version} is available. Run '${Flag.ARENA ? "arena" : "opencode"} upgrade' to update manually.`,
-      duration: 10000,
-    })
+    // PATCHED: disabled to allow 1.0.0-arena.1 without popup overlapping (user wants minimalist)
+    // no toast
   })
 
   return (

@@ -1,16 +1,16 @@
 {
   "$schema": "https://opencode.ai/theme.json",
   "defs": {
-    "canvas": "#000000",
-    "surface": "#0A0A0B",
-    "panel": "#121214",
-    "element": "#1A1A1D",
-    "line": "#2E2E33",
-    "lineSoft": "#232328",
-    "ink": "#FFFFFF",
-    "heading": "#FFFFFF",
-    "inkMuted": "#9B9BA3",
-    "inkDim": "#6E6E76",
+    "canvas": "#08080A",
+    "surface": "#0E0E10",
+    "panel": "#111113",
+    "element": "#1A1A1E",
+    "line": "#242428",
+    "lineSoft": "#1E1E22",
+    "ink": "#F5F5F7",
+    "heading": "#F5F5F7",
+    "inkMuted": "#8A8A93",
+    "inkDim": "#5A5A64",
     "coral": "#7B6DF6",
     "blue": "#A8A0FF",
     "sage": "#4ADE80",
@@ -22,55 +22,205 @@
     "diffDelBg": "#241010"
   },
   "theme": {
-    "primary": { "dark": "coral", "light": "coral" },
-    "secondary": { "dark": "heading", "light": "heading" },
-    "accent": { "dark": "blue", "light": "blue" },
-    "error": { "dark": "rose", "light": "rose" },
-    "warning": { "dark": "sand", "light": "sand" },
-    "success": { "dark": "sage", "light": "sage" },
-    "info": { "dark": "blue", "light": "blue" },
-    "text": { "dark": "ink", "light": "ink" },
-    "textMuted": { "dark": "inkMuted", "light": "inkMuted" },
-    "background": { "dark": "canvas", "light": "canvas" },
-    "backgroundPanel": { "dark": "panel", "light": "panel" },
-    "backgroundElement": { "dark": "element", "light": "element" },
-    "border": { "dark": "line", "light": "line" },
-    "borderActive": { "dark": "coral", "light": "coral" },
-    "borderSubtle": { "dark": "lineSoft", "light": "lineSoft" },
-    "diffAdded": { "dark": "sage", "light": "sage" },
-    "diffRemoved": { "dark": "rose", "light": "rose" },
-    "diffContext": { "dark": "inkDim", "light": "inkDim" },
-    "diffHunkHeader": { "dark": "inkMuted", "light": "inkMuted" },
-    "diffHighlightAdded": { "dark": "sage", "light": "sage" },
-    "diffHighlightRemoved": { "dark": "rose", "light": "rose" },
-    "diffAddedBg": { "dark": "diffAddBg", "light": "diffAddBg" },
-    "diffRemovedBg": { "dark": "diffDelBg", "light": "diffDelBg" },
-    "diffContextBg": { "dark": "surface", "light": "surface" },
-    "diffLineNumber": { "dark": "inkDim", "light": "inkDim" },
-    "diffAddedLineNumberBg": { "dark": "diffAddBg", "light": "diffAddBg" },
-    "diffRemovedLineNumberBg": { "dark": "diffDelBg", "light": "diffDelBg" },
-    "markdownText": { "dark": "ink", "light": "ink" },
-    "markdownHeading": { "dark": "heading", "light": "heading" },
-    "markdownLink": { "dark": "blue", "light": "blue" },
-    "markdownLinkText": { "dark": "blue", "light": "blue" },
-    "markdownCode": { "dark": "blue", "light": "blue" },
-    "markdownBlockQuote": { "dark": "inkMuted", "light": "inkMuted" },
-    "markdownEmph": { "dark": "lilac", "light": "lilac" },
-    "markdownStrong": { "dark": "heading", "light": "heading" },
-    "markdownHorizontalRule": { "dark": "line", "light": "line" },
-    "markdownListItem": { "dark": "blue", "light": "blue" },
-    "markdownListEnumeration": { "dark": "coral", "light": "coral" },
-    "markdownImage": { "dark": "blue", "light": "blue" },
-    "markdownImageText": { "dark": "inkMuted", "light": "inkMuted" },
-    "markdownCodeBlock": { "dark": "ink", "light": "ink" },
-    "syntaxComment": { "dark": "inkDim", "light": "inkDim" },
-    "syntaxKeyword": { "dark": "blue", "light": "blue" },
-    "syntaxFunction": { "dark": "fn", "light": "fn" },
-    "syntaxVariable": { "dark": "ink", "light": "ink" },
-    "syntaxString": { "dark": "sage", "light": "sage" },
-    "syntaxNumber": { "dark": "sand", "light": "sand" },
-    "syntaxType": { "dark": "lilac", "light": "lilac" },
-    "syntaxOperator": { "dark": "inkMuted", "light": "inkMuted" },
-    "syntaxPunctuation": { "dark": "inkMuted", "light": "inkMuted" }
+    "primary": {
+      "dark": "coral",
+      "light": "coral"
+    },
+    "secondary": {
+      "dark": "heading",
+      "light": "heading"
+    },
+    "accent": {
+      "dark": "blue",
+      "light": "blue"
+    },
+    "error": {
+      "dark": "rose",
+      "light": "rose"
+    },
+    "warning": {
+      "dark": "sand",
+      "light": "sand"
+    },
+    "success": {
+      "dark": "sage",
+      "light": "sage"
+    },
+    "info": {
+      "dark": "blue",
+      "light": "blue"
+    },
+    "text": {
+      "dark": "ink",
+      "light": "ink"
+    },
+    "textMuted": {
+      "dark": "inkMuted",
+      "light": "inkMuted"
+    },
+    "background": {
+      "dark": "canvas",
+      "light": "canvas"
+    },
+    "backgroundPanel": {
+      "dark": "panel",
+      "light": "panel"
+    },
+    "backgroundElement": {
+      "dark": "element",
+      "light": "element"
+    },
+    "border": {
+      "dark": "line",
+      "light": "line"
+    },
+    "borderActive": {
+      "dark": "coral",
+      "light": "coral"
+    },
+    "borderSubtle": {
+      "dark": "lineSoft",
+      "light": "lineSoft"
+    },
+    "diffAdded": {
+      "dark": "sage",
+      "light": "sage"
+    },
+    "diffRemoved": {
+      "dark": "rose",
+      "light": "rose"
+    },
+    "diffContext": {
+      "dark": "inkDim",
+      "light": "inkDim"
+    },
+    "diffHunkHeader": {
+      "dark": "inkMuted",
+      "light": "inkMuted"
+    },
+    "diffHighlightAdded": {
+      "dark": "sage",
+      "light": "sage"
+    },
+    "diffHighlightRemoved": {
+      "dark": "rose",
+      "light": "rose"
+    },
+    "diffAddedBg": {
+      "dark": "diffAddBg",
+      "light": "diffAddBg"
+    },
+    "diffRemovedBg": {
+      "dark": "diffDelBg",
+      "light": "diffDelBg"
+    },
+    "diffContextBg": {
+      "dark": "surface",
+      "light": "surface"
+    },
+    "diffLineNumber": {
+      "dark": "inkDim",
+      "light": "inkDim"
+    },
+    "diffAddedLineNumberBg": {
+      "dark": "diffAddBg",
+      "light": "diffAddBg"
+    },
+    "diffRemovedLineNumberBg": {
+      "dark": "diffDelBg",
+      "light": "diffDelBg"
+    },
+    "markdownText": {
+      "dark": "ink",
+      "light": "ink"
+    },
+    "markdownHeading": {
+      "dark": "heading",
+      "light": "heading"
+    },
+    "markdownLink": {
+      "dark": "blue",
+      "light": "blue"
+    },
+    "markdownLinkText": {
+      "dark": "blue",
+      "light": "blue"
+    },
+    "markdownCode": {
+      "dark": "blue",
+      "light": "blue"
+    },
+    "markdownBlockQuote": {
+      "dark": "inkMuted",
+      "light": "inkMuted"
+    },
+    "markdownEmph": {
+      "dark": "lilac",
+      "light": "lilac"
+    },
+    "markdownStrong": {
+      "dark": "heading",
+      "light": "heading"
+    },
+    "markdownHorizontalRule": {
+      "dark": "line",
+      "light": "line"
+    },
+    "markdownListItem": {
+      "dark": "blue",
+      "light": "blue"
+    },
+    "markdownListEnumeration": {
+      "dark": "coral",
+      "light": "coral"
+    },
+    "markdownImage": {
+      "dark": "blue",
+      "light": "blue"
+    },
+    "markdownImageText": {
+      "dark": "inkMuted",
+      "light": "inkMuted"
+    },
+    "markdownCodeBlock": {
+      "dark": "ink",
+      "light": "ink"
+    },
+    "syntaxComment": {
+      "dark": "inkDim",
+      "light": "inkDim"
+    },
+    "syntaxKeyword": {
+      "dark": "blue",
+      "light": "blue"
+    },
+    "syntaxFunction": {
+      "dark": "fn",
+      "light": "fn"
+    },
+    "syntaxVariable": {
+      "dark": "ink",
+      "light": "ink"
+    },
+    "syntaxString": {
+      "dark": "sage",
+      "light": "sage"
+    },
+    "syntaxNumber": {
+      "dark": "sand",
+      "light": "sand"
+    },
+    "syntaxType": {
+      "dark": "lilac",
+      "light": "lilac"
+    },
+    "syntaxOperator": {
+      "dark": "inkMuted",
+      "light": "inkMuted"
+    },
+    "syntaxPunctuation": {
+      "dark": "inkMuted",
+      "light": "inkMuted"
+    }
   }
 }
