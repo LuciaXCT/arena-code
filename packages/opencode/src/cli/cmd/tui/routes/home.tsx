@@ -95,15 +95,12 @@ export function Home() {
           </box>
           <box flexDirection="column" gap={0} flexGrow={1}>
             <For each={recentSessions()}>{(s) => {
-              const title = ((s as any).title || "New session").slice(0, 10)
+              const title = ((s as any).title || "New session").slice(0, 12)
               const age = timeAgo(s.time.updated)
-              const sid = s.id.slice(0, 5)
+              const sid = s.id.slice(0, 6)
               return (
                 <box flexDirection="row" gap={1} paddingLeft={1} paddingTop={0} paddingBottom={1} border={["bottom"]} borderColor={theme.borderSubtle}>
-                  <text fg={theme.textMuted}>○</text>
-                  <text fg={theme.text}>{title}</text>
-                  <text fg={theme.textMuted}>· {age}</text>
-                  <text fg={theme.textMuted}>· {sid}</text>
+                  <text fg={theme.textMuted}>○ {title} · {age} · {sid}</text>
                 </box>
               )
             }}</For>
@@ -145,10 +142,7 @@ export function Home() {
               const age = timeAgo(s.time.updated)
               return (
                 <box flexDirection="row" gap={1} paddingTop={0} paddingBottom={0}>
-                  <text fg={theme.textMuted}>○</text>
-                  <text fg={theme.text}>{title}</text>
-                  <text fg={theme.textMuted}>· {age}</text>
-                  <text fg={theme.primary}>· {sidShort}</text>
+                  <text fg={theme.textMuted}>○ {title} · {age} · {sidShort}</text>
                 </box>
               )
             }}</For>
