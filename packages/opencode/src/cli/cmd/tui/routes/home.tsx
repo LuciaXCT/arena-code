@@ -10,7 +10,6 @@ import { useRoute, useRouteData } from "../context/route"
 import { usePromptRef } from "../context/prompt"
 import { Installation } from "@/installation"
 import { Flag } from "@/flag/flag"
-import { useKV } from "../context/kv"
 import { useCommandDialog } from "../component/dialog-command"
 import { useTerminalDimensions } from "@opentui/solid"
 import { Logo } from "../component/logo"
@@ -56,7 +55,7 @@ export function Home() {
   const recentSessions = createMemo(() => {
     const list = sync.data.session
     if (!list || list.length === 0) return []
-    return list.filter((x) => (x as any).parentID === undefined).toSorted((a, b) => b.time.updated - a.time.updated).slice(0, 8)
+    return list.filter((x) => (x as any).parentID === undefined).toSorted((a, b) => b.time.updated - a.time.updated).slice(0, 6)
   })
 
   let prompt: PromptRef
@@ -72,7 +71,6 @@ export function Home() {
 
   return (
     <box flexDirection="row" width="100%" height="100%">
-      {/* SIDEBAR 28 */}
       <Show when={wide()}>
         <box flexDirection="column" width={28} height="100%" backgroundColor={theme.backgroundElement} border={["right"]} borderColor={theme.borderSubtle} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1}>
           <box flexDirection="row" gap={1}>
@@ -93,11 +91,9 @@ export function Home() {
             <text fg={theme.textMuted}>⌘P</text>
           </box>
           <box marginTop={1} flexDirection="row" gap={1}>
-            <text fg={theme.textMuted}>Sessions</text>
-            <text fg={theme.textMuted}>·</text>
-            <text fg={theme.text}>{recentSessions().length}</text>
+            <text fg={theme.textMuted}>Sessions · {recentSessions().length}</text>
           </box>
-          <box flexDirection="column" gap={0} flexGrow={1} overflow="hidden">
+          <box flexDirection="column" gap={1} flexGrow={1}>
             <For each={recentSessions()}>{(s) => {
               const title = ((s as any).title || "New session").slice(0, 12)
               const age = timeAgo(s.time.updated)
@@ -121,29 +117,22 @@ export function Home() {
         </box>
       </Show>
 
-      {/* MAIN - centered, no overlap */}
-      <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center" backgroundColor={theme.background} paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1} gap={1} overflow="hidden">
+      <box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center" backgroundColor={theme.background} paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1} gap={1}>
         <Logo />
-
         <box flexDirection="row" gap={1} alignItems="center" marginBottom={1}>
           <text fg={theme.primary}>✦ arena</text>
-          <text fg={theme.textMuted}>· {versionText}</text>
-          <text fg={theme.textMuted}>· ○ ● ●</text>
+          <text fg={theme.textMuted}>· {versionText} · ○ ● ●</text>
         </box>
 
-        {/* PROMPT - single border, no inner hint */}
-        <box flexDirection="column" width="70%" maxWidth={75} border={["top","bottom","left","right"]} borderColor={theme.primary} customBorderChars={Rounded} backgroundColor={theme.backgroundPanel} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1}>
+        <box flexDirection="column" width="70%" maxWidth={70} border={["top","bottom","left","right"]} borderColor={theme.primary} customBorderChars={Rounded} backgroundColor={theme.backgroundPanel} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1}>
           <Prompt ref={(r) => { prompt = r; promptRef.set(r) }} />
         </box>
 
         <box flexDirection="row" gap={2} justifyContent="center" marginTop={1}>
-          <text fg={theme.textMuted}>○ tab agent</text>
-          <text fg={theme.textMuted}>· ⌘P search</text>
-          <text fg={theme.textMuted}>· ⌘L sessions</text>
+          <text fg={theme.textMuted}>○ tab agent · ⌘P search · ⌘L sessions</text>
         </box>
 
-        {/* CHIPS - single row center, no overlap */}
-        <box flexDirection="row" gap={1} flexWrap="wrap" justifyContent="center" maxWidth={75} marginTop={1}>
+        <box flexDirection="row" gap={1} flexWrap="wrap" justifyContent="center" maxWidth={70} marginTop={1}>
           <For each={CHIPS}>{(chip) => (
             <box paddingLeft={1} paddingRight={1} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} backgroundColor={theme.backgroundElement} customBorderChars={Rounded} onMouseUp={() => prompt?.set({ input: `Build a ${chip}`, parts: [] })}>
               <text fg={theme.textMuted}>○ {chip}</text>
@@ -151,11 +140,10 @@ export function Home() {
           )}</For>
         </box>
 
-        {/* RESTORE - clean 2-line per session, no garble */}
         <Show when={recentSessions().length > 0}>
-          <box flexDirection="column" width="70%" maxWidth={75} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1} marginTop={1} maxHeight={10} overflow="hidden">
+          <box flexDirection="column" width="70%" maxWidth={70} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1} marginTop={1}>
             <For each={recentSessions().slice(0,3)}>{(s) => {
-              const title = ((s as any).title || "New session").slice(0, 20)
+              const title = ((s as any).title || "New session").slice(0, 18)
               const sidShort = s.id.slice(0, 8)
               const age = timeAgo(s.time.updated)
               return (
