@@ -20,7 +20,7 @@ let once = false
 
 const chips = [
   ["Landing Page", "Build a beautiful landing page with one accent and clear headline."],
-  ["Knowledge/Teaching Material", "Create teaching material with clear structure and examples."],
+  ["Knowledge", "Create teaching material with clear structure and examples."],
   ["3D Modeling", "Generate a 3D model concept with simple geometry."],
   ["Mini Game", "Build a small playable mini game with one mechanic."],
   ["Personal Blog", "Design a personal blog with clean typography and no clutter."],
@@ -80,18 +80,31 @@ export function Home() {
           <text fg={theme.text} attributes={TextAttributes.BOLD}>What can I build for you?</text>
           <text fg={theme.textMuted}>Interact with Arena Code and explore the boundless creative world</text>
         </box>
-        <box width="100%" maxWidth={80} zIndex={1000} paddingTop={1}>
+        <box width="100%" maxWidth={80} zIndex={1000} paddingTop={1} flexDirection="column" gap={1}>
           <Prompt ref={(r) => { prompt = r; promptRef.set(r) }} hint={Hint} />
-          <box flexDirection="row" gap={1} justifyContent="center" marginTop={1} flexWrap="wrap">
+          <box flexDirection="row" gap={1} justifyContent="center" flexWrap="wrap" marginTop={1}>
             <For each={chips}>{([label, text]) => (<box border={["top","bottom","left","right"]} borderColor={theme.border} paddingLeft={1} paddingRight={1} backgroundColor={theme.backgroundElement} onMouseUp={() => prompt?.set({ input: text, parts: [] })}><text fg={theme.textMuted}>{label}</text></box>)}</For>
           </box>
           <Show when={recentSessions().length > 0}>
             <box flexDirection="column" gap={1} marginTop={2} width="100%">
-              <box flexDirection="row" gap={1} alignItems="center">
+              <box flexDirection="row" gap={1} alignItems="center" marginBottom={1}>
                 <text fg={theme.text} attributes={TextAttributes.BOLD}>Recent Sessions</text>
                 <text fg={theme.textMuted}>· {recentSessions().length} · /sessions · ctrl+x l</text>
               </box>
-              <For each={recentSessions()}>{(sess) => (<box flexDirection="row" gap={1} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} backgroundColor={theme.backgroundElement} onMouseUp={() => router.navigate({ type: "session", sessionID: sess.id })}><box flexDirection="column" flexGrow={1} gap={0}><box flexDirection="row" gap={1}><text fg={theme.textMuted}>Session</text><text fg={theme.text}>{(sess as any).title || (sess as any).summary || sess.id.slice(0,12)}</text><text fg={theme.textMuted}>{formatTimeAgo(sess.time.updated)}</text></box><box flexDirection="row" gap={1}><text fg={theme.textMuted}>Continue</text><text fg={theme.accent}>opencode -s {sess.id}</text></box></box><box flexShrink={0} alignItems="center" justifyContent="center"><text fg={theme.primary}>↩</text></box></box>)}</For>
+              <For each={recentSessions()}>{(sess) => (
+                <box flexDirection="column" gap={0} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} backgroundColor={theme.backgroundElement} onMouseUp={() => router.navigate({ type: "session", sessionID: sess.id })}>
+                  <box flexDirection="row" gap={1}>
+                    <text fg={theme.textMuted}>Session</text>
+                    <text fg={theme.text}>{((sess as any).title || (sess as any).summary || sess.id).toString().slice(0, 24)}</text>
+                  </box>
+                  <box flexDirection="row" gap={1} marginTop={1}>
+                    <text fg={theme.textMuted}>{formatTimeAgo(sess.time.updated)}</text>
+                    <text fg={theme.textMuted}>·</text>
+                    <text fg={theme.textMuted}>Continue</text>
+                    <text fg={theme.accent}>opencode -s {sess.id.slice(0, 16)}...</text>
+                  </box>
+                </box>
+              )}</For>
             </box>
           </Show>
         </box>
