@@ -14,6 +14,7 @@ import { useKV } from "../context/kv"
 import { useCommandDialog } from "../component/dialog-command"
 import { useDialog } from "@tui/ui/dialog"
 import { useTerminalDimensions } from "@opentui/solid"
+import { Logo } from "../component/logo"
 
 let once = false
 
@@ -48,20 +49,6 @@ const Rounded = {
   leftT: "├",
   rightT: "┤",
   cross: "┼",
-}
-
-const Empty = {
-  topLeft: "",
-  bottomLeft: "",
-  vertical: "",
-  topRight: "",
-  bottomRight: "",
-  horizontal: " ",
-  bottomT: "",
-  topT: "",
-  cross: "",
-  leftT: "",
-  rightT: "",
 }
 
 export function Home() {
@@ -106,10 +93,9 @@ export function Home() {
   return (
     <>
       <box flexDirection="row" flexGrow={1} width="100%" height="100%">
-        {/* SIDEBAR - workstation style with traffic lights + rounded pill buttons */}
+        {/* SIDEBAR - workstation */}
         <Show when={wide()}>
           <box width={34} flexShrink={0} flexDirection="column" backgroundColor={theme.backgroundPanel} border={["right"]} borderColor={theme.borderSubtle} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1} gap={1}>
-            {/* Traffic lights + title - workstation header */}
             <box flexDirection="row" alignItems="center" gap={1} paddingLeft={1} paddingRight={1} marginBottom={1}>
               <text fg={theme.error}>●</text>
               <text fg={theme.warning}>●</text>
@@ -121,16 +107,13 @@ export function Home() {
               <text fg={theme.textMuted}>{versionText}</text>
             </box>
 
-            {/* New Chat - circle pill with shadow overlay */}
             <box flexDirection="column" gap={0} paddingLeft={1} paddingRight={1}>
-              {/* shadow layer */}
               <box marginLeft={1} marginTop={1} backgroundColor={theme.background} border={["top","bottom","left","right"]} borderColor={theme.background} customBorderChars={Rounded} paddingLeft={2} paddingRight={2} paddingTop={0} paddingBottom={0}>
                 <text fg={theme.background}>+ New Chat</text>
               </box>
               <box marginTop={-1} backgroundColor={theme.primary} border={["top","bottom","left","right"]} borderColor={theme.primary} customBorderChars={Rounded} paddingLeft={2} paddingRight={2} paddingTop={0} paddingBottom={0} flexDirection="row" alignItems="center" justifyContent="center" onMouseUp={() => router.navigate({ type: "home" })}>
                 <text fg={theme.background} attributes={TextAttributes.BOLD}>✦ New Chat</text>
               </box>
-              {/* Search - rounded pill with circle */}
               <box marginTop={1} border={["top","bottom","left","right"]} borderColor={theme.borderSubtle} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingLeft={2} paddingRight={1} paddingTop={0} paddingBottom={0} flexDirection="row" gap={1} alignItems="center" onMouseUp={() => command.show()}>
                 <text fg={theme.textMuted}>○</text>
                 <text fg={theme.textMuted}>Search</text>
@@ -139,7 +122,6 @@ export function Home() {
               </box>
             </box>
 
-            {/* Sessions - circle indicators + realistic list */}
             <box flexDirection="column" gap={0} marginTop={1} flexGrow={1}>
               <box flexDirection="row" gap={1} paddingLeft={1} paddingRight={1} alignItems="center" marginBottom={1}>
                 <text fg={theme.success}>●</text>
@@ -148,13 +130,11 @@ export function Home() {
                 <box flexGrow={1} />
                 <text fg={theme.textMuted}>/s</text>
               </box>
-
               <Show when={recentSessions().length === 0}>
                 <box paddingLeft={2} paddingTop={1}>
                   <text fg={theme.textMuted}>○ No chats yet</text>
                 </box>
               </Show>
-
               <box flexDirection="column" gap={0} flexGrow={1}>
                 <For each={recentSessions()}>{(sess, idx) => (
                   <box flexDirection="row" gap={1} paddingLeft={1} paddingRight={1} paddingTop={0} paddingBottom={0} backgroundColor={idx() % 2 === 0 ? theme.backgroundPanel : theme.background} onMouseUp={() => router.navigate({ type: "session", sessionID: sess.id })}>
@@ -172,62 +152,41 @@ export function Home() {
               </box>
             </box>
 
-            {/* Footer with overlay shadow */}
             <box flexDirection="column" gap={0} paddingLeft={1} paddingRight={1} border={["top"]} borderColor={theme.borderSubtle} paddingTop={1} marginTop={1}>
               <box flexDirection="row" gap={1}>
                 <text fg={theme.textMuted}>○</text>
                 <text fg={theme.textMuted}>{directory().toString().slice(0, 24)}</text>
               </box>
-              <Show when={mcp()}>
-                <box flexDirection="row" gap={1}>
-                  <text fg={theme.success}>●</text>
-                  <text fg={theme.textMuted}>{connectedMcpCount()} MCP</text>
-                </box>
-              </Show>
             </box>
           </box>
         </Show>
 
-        {/* MAIN - smaller banner + realistic circle pill chips + shadow overlay */}
+        {/* MAIN - OLD BANNER COMPACT + workstation */}
         <box flexGrow={1} flexDirection="column" justifyContent="center" alignItems="center" paddingLeft={2} paddingRight={2} gap={0}>
-          {/* Smaller banner - compact */}
-          <box width="100%" maxWidth={68} flexDirection="column" gap={0} alignItems="center" justifyContent="center" flexGrow={1}>
+          <box width="100%" maxWidth={78} flexDirection="column" gap={1} alignItems="center" justifyContent="center" flexGrow={1}>
+            {/* OLD BANNER COMPACT - not too much */}
             <box flexDirection="column" gap={0} alignItems="center" marginBottom={1} width="100%">
-              <box flexDirection="row" gap={1} alignItems="center" justifyContent="center">
-                <text fg={theme.textMuted}>✦</text>
-                <text fg={theme.text} attributes={TextAttributes.BOLD}>arena</text>
-                <text fg={theme.textMuted}>· {versionText}</text>
-                <text fg={theme.textMuted}>○</text>
-                <text fg={theme.success}>●</text>
-                <text fg={theme.warning}>●</text>
-                <text fg={theme.error}>●</text>
-              </box>
+              <Logo />
               <box height={1} />
-              <text fg={theme.text} attributes={TextAttributes.BOLD}>What can I build for you?</text>
-              <text fg={theme.textMuted}>Interact with Arena Code and explore the boundless world</text>
+              <box flexDirection="row" gap={1} alignItems="center" justifyContent="center">
+                <text fg={theme.textMuted}>○</text>
+                <text fg={theme.text} attributes={TextAttributes.BOLD}>What can I build for you?</text>
+                <text fg={theme.textMuted}>○</text>
+              </box>
+              <text fg={theme.textMuted}>Interact with Arena Code and explore the boundless world · {versionText}</text>
             </box>
 
-            {/* Prompt with realistic shadow + rounded circle border */}
-            <box width="100%" flexDirection="column" gap={0} zIndex={1000}>
-              {/* shadow */}
+            <box width="100%" maxWidth={72} flexDirection="column" gap={0} zIndex={1000}>
               <box backgroundColor={theme.background} border={["top","bottom","left","right"]} borderColor={theme.background} customBorderChars={Rounded} marginLeft={1} marginTop={1} paddingLeft={1} paddingRight={1} paddingTop={1} paddingBottom={1}>
-                <text fg={theme.background}>shadow</text>
+                <text fg={theme.background}>.</text>
               </box>
               <box marginTop={-1} border={["top","bottom","left","right"]} borderColor={theme.border} customBorderChars={Rounded} backgroundColor={theme.backgroundElement} paddingLeft={1} paddingRight={1} paddingTop={0} paddingBottom={0}>
                 <Prompt ref={(r) => { prompt = r; promptRef.set(r) }} hint={Hint} />
               </box>
               <box flexDirection="row" gap={1} justifyContent="center" marginTop={1}>
-                <text fg={theme.textMuted}>○ tab</text>
-                <text fg={theme.textMuted}>agent</text>
-                <text fg={theme.textMuted}>·</text>
-                <text fg={theme.textMuted}>⌘P</text>
-                <text fg={theme.textMuted}>search</text>
-                <text fg={theme.textMuted}>·</text>
-                <text fg={theme.textMuted}>⌘L</text>
-                <text fg={theme.textMuted}>sessions</text>
+                <text fg={theme.textMuted}>○ tab agent · ⌘P search · ⌘L sessions</text>
               </box>
 
-              {/* Circle pill chips - realistic workstation */}
               <box flexDirection="row" gap={1} justifyContent="center" flexWrap="wrap" marginTop={2}>
                 <For each={chips}>{([label, text]) => (
                   <box flexDirection="column" gap={0}>
@@ -242,7 +201,6 @@ export function Home() {
                 )}</For>
               </box>
 
-              {/* Narrow fallback sessions */}
               <Show when={!wide() && recentSessions().length > 0}>
                 <box flexDirection="column" gap={0} marginTop={2} width="100%">
                   <box flexDirection="row" gap={1} alignItems="center" marginBottom={1}>
@@ -261,8 +219,8 @@ export function Home() {
             </box>
           </box>
 
-          <box width="100%" maxWidth={68} flexDirection="row" gap={1} paddingTop={1} paddingBottom={1} flexShrink={0} justifyContent="center">
-            <text fg={theme.textMuted}>○ new chat keeps sessions alive · workstation ready</text>
+          <box width="100%" maxWidth={72} flexDirection="row" gap={1} paddingTop={1} paddingBottom={1} flexShrink={0} justifyContent="center">
+            <text fg={theme.textMuted}>○ new chat keeps sessions alive · {versionText} · workstation</text>
           </box>
           <Toast />
         </box>
