@@ -1127,7 +1127,7 @@ function UserMessage(props: {
           borderColor={theme.primary}
           customBorderChars={SplitBorder.customBorderChars}
           marginTop={props.index === 0 ? 0 : 1}
-          marginLeft="auto"
+          marginRight="auto"
           width="70%"
         >
           <box
