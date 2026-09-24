@@ -1126,11 +1126,8 @@ function UserMessage(props: {
           id={props.message.id}
           marginTop={props.index === 0 ? 0 : 1}
           marginRight="auto"
-          width="70%"
+          width="78%"
         >
-          <text fg={theme.textMuted} attributes={TextAttributes.BOLD} paddingLeft={1}>
-            YOU
-          </text>
           <box
             onMouseOver={() => {
               setHover(true)
@@ -1143,21 +1140,23 @@ function UserMessage(props: {
             paddingBottom={1}
             paddingLeft={2}
             paddingRight={2}
-            backgroundColor={hover() ? theme.accent : theme.secondary}
+            backgroundColor={hover() ? theme.backgroundElement : undefined}
             flexShrink={0}
           >
-            <text fg={theme.background}>{text()}</text>
+            <text fg={hover() ? theme.secondary : theme.text} attributes={TextAttributes.BOLD}>
+              {text()}
+            </text>
             <Show when={files().length}>
               <box flexDirection="row" paddingBottom={1} paddingTop={1} gap={1} flexWrap="wrap">
                 <For each={files()}>
                   {(file) => {
                     const directory = file.mime === "application/x-directory"
                     return (
-                      <text fg={theme.background}>
-                        <span style={{ bg: theme.background, fg: theme.secondary }}>
+                      <text fg={theme.text}>
+                        <span style={{ bg: theme.primary, fg: theme.background }}>
                           {directory ? " Directory " : " File "}
                         </span>
-                        <span style={{ bg: theme.textMuted, fg: theme.background }}> {file.filename} </span>
+                        <span style={{ bg: theme.backgroundPanel, fg: theme.text }}> {file.filename} </span>
                       </text>
                     )
                   }}
@@ -1258,8 +1257,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               >
                 ▣{" "}
               </span>{" "}
-              <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
-              <span style={{ fg: theme.textMuted }}> · {props.message.modelID}</span>
+              <span style={{ fg: theme.textMuted }}>{Locale.titlecase(props.message.mode)}</span>
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>

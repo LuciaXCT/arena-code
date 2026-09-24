@@ -4,6 +4,11 @@ import { Flag } from "@/flag/flag"
 import { Installation } from "@/installation"
 
 export async function upgrade() {
+  // Arena Code ships its own release channel, so the upstream opencode version
+  // is not a valid upgrade target for this build. Skipping the check also keeps
+  // the "Update Available" toast from covering the home screen.
+  if (Flag.ARENA || Flag.isArena() || Installation.VERSION.includes("arena")) return
+
   const config = await Config.global()
   const method = await Installation.method()
   const latest = await Installation.latest(method).catch(() => {})

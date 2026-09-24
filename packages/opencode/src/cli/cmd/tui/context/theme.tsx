@@ -5,6 +5,7 @@ import { useSync } from "@tui/context/sync"
 import { createSimpleContext } from "./helper"
 import { Flag } from "@/flag/flag"
 import arenaCode from "./theme/arena-code.json" with { type: "json" }
+import arenaSoft from "./theme/arena-soft.json" with { type: "json" }
 import aura from "./theme/aura.json" with { type: "json" }
 import ayu from "./theme/ayu.json" with { type: "json" }
 import catppuccin from "./theme/catppuccin.json" with { type: "json" }
@@ -140,6 +141,7 @@ type ThemeJson = {
 
 export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   ["arena-code"]: arenaCode,
+  ["arena-soft"]: arenaSoft,
   aura,
   ayu,
   catppuccin,

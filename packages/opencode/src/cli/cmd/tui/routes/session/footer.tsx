@@ -63,11 +63,13 @@ export function Footer() {
                 {permissions().length > 1 ? "s" : ""}
               </text>
             </Show>
-            <text fg={theme.text}>
-              <span style={{ fg: lsp().length > 0 ? theme.success : theme.textMuted }}>•</span> {lsp().length} LSP
-            </text>
+            <Show when={lsp().length > 0}>
+              <text fg={theme.textMuted}>
+                <span style={{ fg: theme.success }}>•</span> {lsp().length} LSP
+              </text>
+            </Show>
             <Show when={mcp()}>
-              <text fg={theme.text}>
+              <text fg={theme.textMuted}>
                 <Switch>
                   <Match when={mcpError()}>
                     <span style={{ fg: theme.error }}>⊙ </span>
@@ -79,7 +81,6 @@ export function Footer() {
                 {mcp()} MCP
               </text>
             </Show>
-            <text fg={theme.textMuted}>/status</text>
           </Match>
         </Switch>
       </box>
