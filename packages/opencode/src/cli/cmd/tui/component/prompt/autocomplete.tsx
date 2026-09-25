@@ -68,6 +68,8 @@ export function Autocomplete(props: {
   setPrompt: (input: (prompt: PromptInfo) => void) => void
   setExtmark: (partIndex: number, extmarkId: number) => void
   anchor: () => BoxRenderable
+  // Which way the menu opens. Home sits under the wordmark, so it opens down.
+  placement?: "above" | "below"
   input: () => TextareaRenderable
   ref: (ref: AutocompleteRef) => void
   fileStyleId: number
@@ -679,13 +681,38 @@ export function Autocomplete(props: {
     return 1
   })
 
+  // The menu is an overlay, so it has to be told how tall it may be. Rows are
+  // screen-space while `position()` is parent-relative, so measure the room
+  // against the anchor's absolute box. (Opening upward from `y - height` used
+  // to walk straight over the home wordmark, and a relative `y` made the clamp
+  // drift with the column's offset.)
+  const anchorBox = createMemo(() => {
+    positionTick()
+    const anchor = props.anchor()
+    return { y: anchor?.y ?? 0, height: anchor?.height ?? 1 }
+  })
+  const below = () => (props.placement ?? "above") === "below"
+
+  const menuHeight = createMemo(() => {
+    const rows = dimensions().height
+    const { y, height: anchorHeight } = anchorBox()
+    const room = below() ? rows - y - anchorHeight : y
+    return Math.max(1, Math.min(height(), Math.max(1, room)))
+  })
+
+  // Downward placement starts under the prompt by construction, so the menu can
+  // never climb back over the banner; it just gives up rows off the bottom.
+  const menuTop = createMemo(() =>
+    below() ? position().y + anchorBox().height : position().y - menuHeight(),
+  )
+
   let scroll: ScrollBoxRenderable
 
   return (
     <box
       visible={store.visible !== false}
       position="absolute"
-      top={position().y - height()}
+      top={menuTop()}
       left={position().x}
       width={position().width}
       zIndex={100}
@@ -695,7 +722,7 @@ export function Autocomplete(props: {
       <scrollbox
         ref={(r: ScrollBoxRenderable) => (scroll = r)}
         backgroundColor={theme.backgroundMenu}
-        height={height()}
+        height={menuHeight()}
         scrollbarOptions={{ visible: false }}
       >
         <For

@@ -41,6 +41,8 @@ export type PromptProps = {
   showPlaceholder?: boolean
   // Home uses this to keep the composer minimal; sessions keep the model row.
   hideModel?: boolean
+  // Home opens the slash/@ menu downward so it never covers the wordmark.
+  menuPlacement?: "above" | "below"
 }
 
 export type PromptRef = {
@@ -472,6 +474,10 @@ export function Prompt(props: PromptProps) {
       setStore("prompt", prompt)
       restoreExtmarksFromParts(prompt.parts)
       input.gotoBufferEnd()
+      // setText does not re-measure the textarea, so a prompt filled by a chip
+      // stayed one line tall and hid everything above the cursor.
+      input.getLayoutNode().markDirty()
+      renderer.requestRender()
     },
     reset() {
       input.clear()
@@ -727,6 +733,7 @@ export function Prompt(props: PromptProps) {
     <>
       <Autocomplete
         sessionID={props.sessionID}
+        placement={props.menuPlacement ?? "above"}
         ref={(r) => (autocomplete = r)}
         anchor={() => anchor}
         input={() => input}
@@ -758,17 +765,21 @@ export function Prompt(props: PromptProps) {
           <box
             paddingLeft={2}
             paddingRight={2}
-            paddingTop={1}
+            paddingTop={0}
             flexShrink={0}
             backgroundColor={theme.backgroundElement}
             flexGrow={1}
+            alignItems="stretch"
+            justifyContent="flex-start"
           >
+            {/* Starts at one line and grows with the message, up to eight, then
+                scrolls. The chip fill nudges a re-measure so it grows too. */}
             <textarea
               placeholder={"How can I help you today?"}
               textColor={keybind.leader ? theme.textMuted : theme.text}
               focusedTextColor={keybind.leader ? theme.textMuted : theme.text}
               minHeight={1}
-              maxHeight={6}
+              maxHeight={8}
               onContentChange={() => {
                 const value = input.plainText
                 setStore("prompt", "input", value)

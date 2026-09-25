@@ -1566,11 +1566,25 @@ function InlineTool(props: {
   )
 }
 
-function BlockTool(props: { title: string; children: JSX.Element; onClick?: () => void; part?: ToolPart }) {
+// Tool output is collapsed by default. A search or a shell command can dump
+// hundreds of lines, and that should never be the thing that pushes the
+// conversation off the screen. Click the block to open it.
+function BlockTool(props: {
+  title: string
+  children: JSX.Element
+  onClick?: () => void
+  part?: ToolPart
+  // Some blocks are the point of the turn (the todo list is the plan) and must
+  // never be hidden behind a click.
+  alwaysOpen?: boolean
+}) {
   const { theme } = useTheme()
   const renderer = useRenderer()
   const [hover, setHover] = createSignal(false)
+  const [open, setOpen] = createSignal(props.alwaysOpen ?? false)
   const error = createMemo(() => (props.part?.state.status === "error" ? props.part.state.error : undefined))
+  // A failure is never hidden - a collapsed error is worse than a loud one.
+  const expanded = createMemo(() => open() || Boolean(error()))
   return (
     <box
       border={["left"]}
@@ -1582,19 +1596,28 @@ function BlockTool(props: { title: string; children: JSX.Element; onClick?: () =
       backgroundColor={hover() ? theme.backgroundMenu : theme.backgroundPanel}
       customBorderChars={SplitBorder.customBorderChars}
       borderColor={theme.background}
-      onMouseOver={() => props.onClick && setHover(true)}
+      onMouseOver={() => setHover(true)}
       onMouseOut={() => setHover(false)}
       onMouseUp={() => {
         if (renderer.getSelection()?.getSelectedText()) return
-        props.onClick?.()
+        if (props.alwaysOpen) return
+        // Blocks that own a click action keep it; the rest toggle their body.
+        if (props.onClick) return props.onClick()
+        setOpen((v) => !v)
       }}
     >
       <text paddingLeft={3} fg={theme.textMuted}>
+        <span style={{ fg: theme.textMuted }}>{expanded() ? "▾" : "▸"} </span>
         {props.title}
+        <Show when={!expanded()}>
+          <span style={{ fg: theme.border }}> click to expand</span>
+        </Show>
       </text>
-      {props.children}
-      <Show when={error()}>
-        <text fg={theme.error}>{error()}</text>
+      <Show when={expanded()}>
+        {props.children}
+        <Show when={error()}>
+          <text fg={theme.error}>{error()}</text>
+        </Show>
       </Show>
     </box>
   )
@@ -1882,7 +1905,7 @@ function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
   return (
     <Switch>
       <Match when={props.metadata.todos?.length}>
-        <BlockTool title="# Todos" part={props.part}>
+        <BlockTool title="# Todos" part={props.part} alwaysOpen>
           <box>
             <For each={props.input.todos ?? []}>
               {(todo) => <TodoItem status={todo.status} content={todo.content} />}

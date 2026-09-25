@@ -7,6 +7,7 @@ import { Snapshot } from "@/snapshot"
 import { SessionSummary } from "./summary"
 import { Bus } from "@/bus"
 import { SessionRetry } from "./retry"
+import { SessionModelRotate } from "./model-rotate"
 import { SessionStatus } from "./status"
 import { Plugin } from "@/plugin"
 import type { Provider } from "@/provider/provider"
@@ -17,6 +18,8 @@ import { PermissionNext } from "@/permission/next"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
+  // How many times one turn may hop free models before giving up.
+  const MAX_MODEL_SWAPS = 3
   const log = Log.create({ service: "session.processor" })
 
   export type Info = Awaited<ReturnType<typeof create>>
@@ -32,6 +35,7 @@ export namespace SessionProcessor {
     let snapshot: string | undefined
     let blocked = false
     let attempt = 0
+    let swaps = 0
     let needsCompaction = false
 
     const result = {
@@ -351,6 +355,30 @@ export namespace SessionProcessor {
               await SessionRetry.sleep(delay, input.abort).catch(() => {})
               continue
             }
+
+            // A free lane that dies mid-stream is not retryable in place, so the
+            // retry above never fires and the turn ends. Move to the next free
+            // model and replay the same request there instead.
+            const problem = SessionModelRotate.reason(error)
+            if (problem && swaps < MAX_MODEL_SWAPS) {
+              const model = await SessionModelRotate.next(streamInput.model, problem)
+              if (model) {
+                swaps++
+                streamInput.model = model
+                input.model = model
+                input.assistantMessage.providerID = model.providerID
+                input.assistantMessage.modelID = model.id
+                SessionStatus.set(input.sessionID, {
+                  type: "retry",
+                  attempt: swaps,
+                  message: `Switched to ${model.providerID}/${model.id}`,
+                  next: Date.now(),
+                })
+                await SessionRetry.sleep(300, input.abort).catch(() => {})
+                continue
+              }
+            }
+
             input.assistantMessage.error = error
             Bus.publish(Session.Event.Error, {
               sessionID: input.assistantMessage.sessionID,

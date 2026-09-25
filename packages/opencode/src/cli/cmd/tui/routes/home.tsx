@@ -16,7 +16,7 @@ import { useCommandDialog } from "../component/dialog-command"
 // TODO: what is the best way to do this?
 let once = false
 
-const CHIPS = ["Landing Page", "Knowledge Base", "3D Modeling", "Mini Game", "Personal Blog", "Dashboard"] as const
+const CHIPS = ["Landing Page", "Mini Game", "Dashboard"] as const
 
 // Auto-generated session titles look like "New session - 2026-09-24T16:29:14Z".
 // Strip the ISO tail so a raw timestamp never leaks into the list.
@@ -193,8 +193,16 @@ export function Home() {
               </text>
             </box>
 
-            <box flexDirection="column" flexGrow={1} gap={0}>
-              <For each={recentSessions().slice(0, sidebarItems())}>
+            {/* Scrollable so the whole history is reachable, not just the
+                few that happen to fit above the fold. */}
+            <scrollbox
+              flexDirection="column"
+              flexGrow={1}
+              minHeight={0}
+              verticalScrollbarOptions={{ visible: false }}
+              horizontalScrollbarOptions={{ visible: false }}
+            >
+              <For each={recentSessions()}>
                 {(s) => {
                   const [hover, setHover] = createSignal(false)
                   const title = friendlyTitle(s, 22)
@@ -219,7 +227,7 @@ export function Home() {
                   )
                 }}
               </For>
-            </box>
+            </scrollbox>
 
             <box height={1} flexShrink={0}>
               <text fg={theme.textMuted} selectable={false}>
@@ -245,6 +253,7 @@ export function Home() {
           <box width="100%" maxWidth={82} flexShrink={0}>
             <Prompt
               hideModel
+              menuPlacement="below"
               ref={(r) => {
                 prompt = r
                 promptRef.set(r)
