@@ -75,6 +75,25 @@ Want arena to claim the `opencode` command anyway? `ARENA_TAKE_OPENCODE=1`.
 Uninstall removes the `arena` launcher, the binary, and the musl libs — and only removes
 `opencode` if that launcher is ours; your own binary is never touched.
 
+### Configuration
+
+Arena reads `~/.config/opencode/opencode.json` (or `.jsonc`), same as opencode. Provider
+credentials belong under `options`:
+
+```json
+{
+  "provider": {
+    "myprovider": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": { "baseURL": "http://localhost:20128/v1", "apiKey": "sk-..." }
+    }
+  }
+}
+```
+
+Older configs that put `apiKey` / `baseURL` / `headers` directly on the provider are accepted
+too — they're folded into `options` at load time instead of failing the whole file.
+
 ### Something broke?
 
 Run the doctor and paste the report file — it captures the environment, DNS setup, installed

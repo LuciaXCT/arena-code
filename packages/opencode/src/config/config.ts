@@ -1098,6 +1098,38 @@ export namespace Config {
       })
     }
 
+    // Older configs — and configs written for other forks — keep provider
+    // credentials at the top level (`provider.x.apiKey`). Fold those into
+    // `options` rather than rejecting the whole file: a stray legacy key
+    // shouldn't cost someone their entire configuration.
+    if (data && typeof data === "object" && "provider" in data) {
+      const providers = (data as { provider?: unknown }).provider
+      const migrated: string[] = []
+      if (providers && typeof providers === "object") {
+        for (const [id, value] of Object.entries(providers as Record<string, unknown>)) {
+          if (!value || typeof value !== "object") continue
+          const provider = value as Record<string, unknown>
+          const options =
+            provider.options && typeof provider.options === "object"
+              ? (provider.options as Record<string, unknown>)
+              : {}
+          let moved = false
+          for (const key of ["apiKey", "baseURL", "headers"] as const) {
+            if (provider[key] === undefined) continue
+            if (options[key] === undefined) options[key] = provider[key]
+            delete provider[key]
+            moved = true
+          }
+          if (!moved) continue
+          provider.options = options
+          migrated.push(id)
+        }
+      }
+      if (migrated.length) {
+        log.warn("moved legacy provider keys into options", { providers: migrated })
+      }
+    }
+
     const parsed = Info.safeParse(data)
     if (parsed.success) {
       if (!parsed.data.$schema) {

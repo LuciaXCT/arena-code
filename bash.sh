@@ -15,7 +15,7 @@
 set -u
 
 REPO="LuciaXCT/arena-code"
-DEFAULT_TAG="v1.0.0-arena.1"
+DEFAULT_TAG="v1.0.0-arena.2"
 BIN_DIR="$HOME/.local/bin"
 BIN_NAME="opencode"
 SYM_NAME="arena"
@@ -340,11 +340,25 @@ TAG="${ARENA_VERSION:-}"
 if [ -n "$TAG" ]; then
   ok "pinned by ARENA_VERSION: $TAG"
 else
-  # prefer Arena Code's own releases — the repo also carries upstream
-  # leftover tags (v1.18.32-unguarded etc.) that must never win.
-  TAG=$(curl -fsSL -m 15 "https://api.github.com/repos/$REPO/releases?per_page=30" \
-        | grep -o '"tag_name": *"v[0-9.]*-arena[^"]*"' \
-        | head -1 | cut -d'"' -f4)
+  # Prefer Arena Code's own releases — the repo also carries upstream leftover
+  # tags (v1.18.32-unguarded) and older arena tags whose assets are named
+  # differently. Only accept a tag that actually publishes the asset we need.
+  CANDIDATES=$(curl -fsSL -m 15 "https://api.github.com/repos/$REPO/releases?per_page=30" \
+    | grep -o '"tag_name": *"v[0-9.]*-arena[^"]*"' \
+    | cut -d'"' -f4 | head -6)
+  for CAND in $CANDIDATES; do
+    CVER=${CAND#v}
+    if [ "$IS_TERMUX" = true ]; then
+      CASSET="arena-code-$CVER-termux-arm64.zip"
+    else
+      CASSET="arena-code-$CVER-$OS-$ARCH.zip"
+    fi
+    if curl -fsIL -o /dev/null -m 15 "https://github.com/$REPO/releases/download/$CAND/$CASSET" 2>/dev/null; then
+      TAG="$CAND"
+      break
+    fi
+    warn "skipping $CAND — no $CASSET published"
+  done
   if [ -n "$TAG" ]; then
     ok "latest arena release: $TAG"
   else
