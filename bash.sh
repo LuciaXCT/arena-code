@@ -91,6 +91,9 @@ spin() {
   printf '\r\033[K'
 }
 
+# never let a TUI take the terminal hostage when we only want --version
+if have timeout; then TMO="timeout 10"; else TMO=""; fi
+
 # never read stdin implicitly (sha256sum -c - would swallow the script
 # in curl|bash mode) — always pass files as arguments.
 sha_file() {
@@ -126,7 +129,12 @@ fi
 if [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--debug" ]; then
   DOCTMP="$(mktemp -d)"
   trap 'rm -rf "$DOCTMP"' EXIT
-  printf '%s── ARENA CODE DOCTOR ─────────────────────%s\n' "$B" "$X"
+  REPORT="${ARENA_DOCTOR_FILE:-$HOME/arena-doctor.txt}"
+  LAUNCHER="$BIN_DIR/$BIN_NAME"
+  [ "$IS_TERMUX" = true ] && LAUNCHER="$PREFIX/bin/opencode"
+  # the whole report goes to a file — the phone screen stays clean
+  {
+  printf '── ARENA CODE DOCTOR ─────────────────────\n'
   printf 'date       : %s\n' "$(date)"
   printf 'uname      : %s\n' "$(uname -srm)"
   printf 'backend    : %s\n' "$([ "$IS_TERMUX" = true ] && printf termux || printf native)"
@@ -143,7 +151,7 @@ if [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--debug" ]; then
   for T in curl unzip tar proot busybox python3; do have "$T" && printf '%s ' "$T"; done
   printf '\nstorage    : '
   df -h "$HOME" 2>/dev/null | tail -1 | awk '{print $4" free of "$2}'
-  printf 'version    : %s\n' "$($([ "$IS_TERMUX" = true ] && printf %s "$PREFIX/bin/opencode" || printf %s "$BIN_DIR/$BIN_NAME") --version 2>/dev/null | head -1 || true)"
+  printf 'version    : %s\n' "$([ -f "$LAUNCHER" ] && $TMO "$LAUNCHER" --version 2>/dev/null | head -1 || true)"
   if [ "$IS_TERMUX" = true ]; then
     printf '\n%s— files —%s\n' "$DM" "$X"
     for F in "$PREFIX/lib/arena-bin/opencode" "$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1" "$PREFIX/lib/arena-musl/libc.musl-aarch64.so.1" "$PREFIX/lib/arena-musl/libstdc++.so.6" "$PREFIX/lib/arena-musl/libgcc_s.so.1"; do
@@ -160,9 +168,9 @@ if [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--debug" ]; then
   fi
   printf '\n%s— exec test —%s\n' "$DM" "$X"
   if [ "$IS_TERMUX" = true ]; then
-    sh "$PREFIX/bin/opencode" --version > "$DOCTMP/out" 2> "$DOCTMP/err"
+    $TMO sh "$LAUNCHER" --version > "$DOCTMP/out" 2> "$DOCTMP/err"
   else
-    "$BIN_DIR/$BIN_NAME" --version > "$DOCTMP/out" 2> "$DOCTMP/err"
+    $TMO "$LAUNCHER" --version > "$DOCTMP/out" 2> "$DOCTMP/err"
   fi
   RC=$?
   printf 'rc         : %s\n' "$RC"
@@ -174,16 +182,26 @@ if [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--debug" ]; then
     fi
     if [ "$IS_TERMUX" = true ]; then
       printf 'trace (last 12):\n'
-      sh -x "$PREFIX/bin/opencode" --version 2>&1 | tail -12 | sed 's/^/  /'
+      $TMO sh -x "$LAUNCHER" --version 2>&1 | tail -12 | sed 's/^/  /'
     fi
   fi
   if [ "$IS_TERMUX" = true ]; then
-    printf '\n%s— raw loader test (bypasses proot) —%s\n' "$DM" "$X"
-    "$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1" --library-path "$PREFIX/lib/arena-musl" "$PREFIX/lib/arena-bin/opencode" --version 2>&1 | tail -5 | sed 's/^/  /'
+    printf '\n— raw loader test (bypasses proot) —\n'
+    $TMO "$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1" --library-path "$PREFIX/lib/arena-musl" "$PREFIX/lib/arena-bin/opencode" --version 2>&1 | tail -5 | sed 's/^/  /'
   fi
-  printf '\n%s— net test —%s\n' "$DM" "$X"
+  printf '\n— net test —\n'
   printf 'api.github.com: %s\n' "$(curl -s -o /dev/null -w '%{http_code}' -m 8 https://api.github.com 2>/dev/null || printf FAIL)"
-  printf '\n%s  copy everything above and paste it to the rat%s\n\n' "$B" "$X"
+  printf '\nreport end.\n'
+  } > "$REPORT" 2>&1
+
+  printf '\n%s  doctor report saved%s\n' "$G" "$X"
+  printf '  %s\n' "$REPORT"
+  if [ "${RC:-1}" = "0" ]; then
+    printf '%s  exec test: OK%s\n' "$G" "$X"
+  else
+    printf '%s  exec test: FAILED%s\n' "$R" "$X"
+  fi
+  printf '%s  send that file to the rat  (view: cat %s)%s\n\n' "$DM" "$REPORT" "$X"
   exit 0
 fi
 
@@ -393,6 +411,19 @@ if [ "$IS_TERMUX" = true ]; then
     else
       ok "proot present"
     fi
+
+    # proot binds $PREFIX/etc/resolv.conf into the sandbox — make sure it exists
+    if [ ! -f "$PREFIX/etc/resolv.conf" ]; then
+      if ask_yn "install resolv-conf via pkg? (DNS source for the proot bind)" Y; then
+        pkg install -y resolv-conf >/dev/null 2>&1 \
+          && ok "resolv-conf installed" \
+          || warn "resolv-conf failed — run manually: pkg install resolv-conf"
+      else
+        warn "no $PREFIX/etc/resolv.conf — DNS may fail; fix: pkg install resolv-conf"
+      fi
+    else
+      ok "$PREFIX/etc/resolv.conf present"
+    fi
   else
     ok "no proot needed — /etc/resolv.conf is readable"
   fi
@@ -428,8 +459,6 @@ if [ "$IS_TERMUX" = true ]; then
   install -m 755 "$BIN_SRC" "$ARENA_BIN/opencode"
   ok "binary → $ARENA_BIN/opencode"
 
-  [ -f "$PREFIX/etc/resolv.conf" ] || warn "$PREFIX/etc/resolv.conf missing — if DNS fails: pkg install resolv-conf"
-
   write_launcher() {
     local pre=""
     if [ "$NEED_PROOT" = true ]; then
@@ -450,7 +479,7 @@ if [ "$IS_TERMUX" = true ]; then
   done
   ok "launchers → \$PREFIX/bin/opencode + \$PREFIX/bin/arena"
 
-  V=$("$PREFIX/bin/opencode" --version 2>/dev/null | head -1)
+  V=$($TMO "$PREFIX/bin/opencode" --version 2>/dev/null | head -1)
   if [ -n "$V" ]; then
     ok "verified: $V"
   else
@@ -507,7 +536,7 @@ case ":$PATH:" in
     ;;
 esac
 
-V=$("$BIN_DIR/$BIN_NAME" --version 2>/dev/null | head -1)
+V=$($TMO "$BIN_DIR/$BIN_NAME" --version 2>/dev/null | head -1)
 if [ -n "$V" ]; then
   ok "verified: $BIN_NAME $V"
 else
