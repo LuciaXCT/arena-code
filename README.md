@@ -39,18 +39,21 @@ curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | 
 
 ### Termux (Android)
 
-Same one-liner, run inside Termux. The script detects Termux and takes a different lane:
+Same one-liner, run inside Termux. The script detects Termux and takes a different lane —
+**no distro, no rootfs, no proot-distro**:
 
-1. Installs `proot-distro` via `pkg` (asks first) and an Alpine rootfs (~10 MB)
-2. Downloads the `linux-arm64-musl` build into the Alpine sandbox
-3. Writes `$PREFIX/bin/opencode` + `$PREFIX/bin/arena` launchers, so you still just run `opencode`
+1. Installs `proot` via `pkg` (asks first, ~1 MB) — used only to bind `/etc/resolv.conf`,
+   `/etc/hosts`, `/tmp` and `$HOME` for the binary
+2. Grabs just the three musl runtime libs (`ld-musl`, `libstdc++`, `libgcc`, ~4 MB total)
+   straight from Alpine's CDN
+3. Drops the `linux-arm64-musl` binary in `$PREFIX/lib/arena-bin/` and writes
+   `$PREFIX/bin/opencode` + `$PREFIX/bin/arena` launchers
 
-Android's bionic libc can't run the binary directly — the Alpine proot sandbox is the same
-trick Termux users run upstream opencode with. Config lives inside the sandbox at
-`/root/.config/opencode`; enter it directly with `proot-distro login alpine`.
+Android's bionic libc can't run the binary directly, so the launcher invokes the musl loader
+explicitly: `ld-musl-aarch64.so.1 --library-path … opencode`. Total overhead beyond the
+binary is ~6 MB. Config lives at the normal `~/.config/opencode`, same as desktop.
 
-Uninstall removes the launchers and the binary but keeps the Alpine distro
-(`proot-distro remove alpine` deletes it fully).
+Uninstall removes the launchers, the binary, and the musl libs.
 
 ### Why not npm?
 

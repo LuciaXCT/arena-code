@@ -92,11 +92,13 @@ if [ "${1:-}" = "--uninstall" ]; then
     for F in "$PREFIX/bin/opencode" "$PREFIX/bin/arena"; do
       [ -f "$F" ] && rm -f "$F" && ok "removed $F"
     done
-    ROOTFS="$PREFIX/var/lib/proot-distro/installed-rootfs/alpine"
-    if [ -f "$ROOTFS/root/.local/bin/opencode" ]; then
-      rm -f "$ROOTFS/root/.local/bin/opencode" && ok "removed binary from alpine rootfs"
+    [ -d "$PREFIX/lib/arena-bin" ] && rm -rf "$PREFIX/lib/arena-bin" && ok "removed $PREFIX/lib/arena-bin"
+    [ -d "$PREFIX/lib/arena-musl" ] && rm -rf "$PREFIX/lib/arena-musl" && ok "removed $PREFIX/lib/arena-musl"
+    LEGACY="$PREFIX/var/lib/proot-distro/installed-rootfs/alpine"
+    if [ -d "$LEGACY" ]; then
+      warn "old alpine rootfs found (~300 MB) — reclaim it: proot-distro remove alpine"
     fi
-    warn "alpine distro kept — remove fully with: proot-distro remove alpine"
+    warn "config left untouched: ~/.config/opencode"
     exit 0
   fi
   for F in "$BIN_DIR/$BIN_NAME" "$BIN_DIR/$SYM_NAME"; do
@@ -152,7 +154,7 @@ case "$ARCH_RAW" in
 esac
 
 if [ "$IS_TERMUX" = true ]; then
-  ok "Termux (Android) detected — agent runs in an alpine proot sandbox"
+  ok "Termux (Android) detected — musl runtime, no distro needed"
 elif grep -qi microsoft /proc/version 2>/dev/null; then
   ok "WSL detected"
 else
@@ -212,7 +214,8 @@ printf '\n%s── SUMMARY ─────────────────�
 printf '  version   : %s\n' "$TAG"
 printf '  platform  : %s-%s\n' "$OS" "$ARCH"
 if [ "$IS_TERMUX" = true ]; then
-  printf '  binary    : alpine proot → /root/.local/bin/opencode\n'
+  printf '  binary    : $PREFIX/lib/arena-bin/opencode\n'
+  printf '  runtime   : musl libs (~4 MB) + proot (~1 MB) — NO distro\n'
   printf '  launchers : $PREFIX/bin/opencode + $PREFIX/bin/arena\n'
 else
   printf '  binary    : %s/%s\n' "$BIN_DIR" "$BIN_NAME"
@@ -260,62 +263,79 @@ ok "extracted"
 step "5/5" "Install"
 
 if [ "$IS_TERMUX" = true ]; then
-  ROOTFS="$PREFIX/var/lib/proot-distro/installed-rootfs/alpine"
+  ARENA_BIN="$PREFIX/lib/arena-bin"
+  ARENA_LIB="$PREFIX/lib/arena-musl"
 
-  if ! have proot-distro; then
-    if ask_yn "install proot-distro via pkg? (runs the agent in an alpine sandbox)" Y; then
-      pkg install -y proot-distro >/dev/null 2>&1 \
-        && ok "proot-distro installed" \
-        || { err "pkg install failed — run manually: pkg install proot-distro"; exit 1; }
+  # proot (~1 MB) — used ONLY to bind the few absolute paths the musl
+  # binary expects (/etc/resolv.conf etc.). No distro, no rootfs.
+  if ! have proot; then
+    if ask_yn "install proot via pkg? (~1 MB — wires up DNS, nothing else)" Y; then
+      pkg install -y proot >/dev/null 2>&1 \
+        && ok "proot installed" \
+        || { err "pkg install failed — run manually: pkg install proot"; exit 1; }
     else
-      err "termux needs proot-distro — aborting"; exit 1
+      err "termux needs proot — aborting"; exit 1
     fi
   else
-    ok "proot-distro present"
+    ok "proot present"
   fi
 
-  if [ ! -d "$ROOTFS" ]; then
-    if ask_yn "download the alpine rootfs (~10 MB)?" Y; then
-      proot-distro install alpine >/dev/null 2>&1 \
-        && ok "alpine installed" \
-        || { err "proot-distro install alpine failed"; exit 1; }
-    else
-      err "aborted — alpine rootfs is required"; exit 1
-    fi
-  else
-    ok "alpine rootfs present"
+  # musl runtime straight from alpine's CDN — ~4 MB total, no distro
+  CDN="https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/aarch64"
+  TAR="tar"; have tar || TAR="busybox tar"
+  mkdir -p "$ARENA_LIB" "$TMP/libs"
+  for SPEC in "musl:musl-[0-9]" "libstdc++:libstdc\\+\\+-[0-9]" "libgcc:libgcc-[0-9]"; do
+    NAME=${SPEC%%:*}; PAT=${SPEC#*:}
+    APK=$(curl -fsSL -m 20 "$CDN/" | grep -oE "$PAT[^\"']*\.apk" | sort -Vu | tail -1)
+    case "$NAME:$APK" in
+      musl:)        APK=musl-1.2.5-r3.apk ;;
+      libstdc++:)   APK='libstdc++-13.2.1_git20240309-r1.apk' ;;
+      libgcc:)      APK=libgcc-13.2.1_git20240309-r1.apk ;;
+    esac
+    curl -fsSL -o "$TMP/libs/$NAME.apk" "$CDN/$APK" & SPID=$!
+    spin "fetching $APK" $SPID
+    wait $SPID || { err "download failed: $CDN/$APK"; exit 1; }
+    $TAR -xzf "$TMP/libs/$NAME.apk" -C "$TMP/libs" 2>/dev/null \
+      || { err "couldn't unpack $APK"; exit 1; }
+  done
+  cp -a "$TMP/libs/lib/." "$ARENA_LIB/" \
+    && cp -a "$TMP/libs/usr/lib/." "$ARENA_LIB/" \
+    && ok "musl runtime → $ARENA_LIB (~4 MB)" \
+    || { err "musl runtime setup failed"; exit 1; }
+
+  mkdir -p "$ARENA_BIN"
+  if [ -f "$ARENA_BIN/opencode" ]; then
+    BAK="$ARENA_BIN/opencode.arena-bak.$(date +%s)"
+    cp "$ARENA_BIN/opencode" "$BAK" && warn "backed up old binary → $BAK"
   fi
+  install -m 755 "$BIN_SRC" "$ARENA_BIN/opencode"
+  ok "binary → $ARENA_BIN/opencode"
 
-  mkdir -p "$ROOTFS/root/.local/bin"
-
-  if [ -f "$ROOTFS/root/.local/bin/opencode" ]; then
-    BAK="$ROOTFS/root/.local/bin/opencode.arena-bak.$(date +%s)"
-    cp "$ROOTFS/root/.local/bin/opencode" "$BAK" && warn "backed up old binary → $BAK"
-  fi
-
-  install -m 755 "$BIN_SRC" "$ROOTFS/root/.local/bin/opencode"
-  ok "binary → alpine:/root/.local/bin/opencode"
-
-  proot-distro login alpine -- apk add --no-cache ncurses-terminfo libstdc++ libgcc >/dev/null 2>&1 & SPID=$!
-  spin "apk bootstrap (ncurses-terminfo libstdc++ libgcc)" $SPID
-  wait $SPID \
-    && ok "alpine deps ready" \
-    || warn "apk bootstrap failed — run: proot-distro login alpine -- apk add ncurses-terminfo libstdc++ libgcc"
+  [ -f "$PREFIX/etc/resolv.conf" ] || warn "$PREFIX/etc/resolv.conf missing — if DNS fails: pkg install resolv-conf"
 
   for L in opencode arena; do
     cat > "$PREFIX/bin/$L" <<LAUNCHER
 #!/data/data/com.termux/files/usr/bin/sh
-exec proot-distro login alpine -- /root/.local/bin/opencode "\$@"
+LIB="\$PREFIX/lib/arena-musl"
+export TMPDIR="\$PREFIX/tmp"
+mkdir -p "\$TMPDIR" 2>/dev/null
+exec proot -0 \
+  -b "\$PREFIX/etc/resolv.conf:/etc/resolv.conf" \
+  -b "\$PREFIX/etc/hosts:/etc/hosts" \
+  -b "\$PREFIX/tmp:/tmp" \
+  -b "\$HOME:/root" \
+  "\$LIB/ld-musl-aarch64.so.1" --library-path "\$LIB" "\$PREFIX/lib/arena-bin/opencode" "\$@"
 LAUNCHER
     chmod +x "$PREFIX/bin/$L"
   done
   ok "launchers → \$PREFIX/bin/opencode + \$PREFIX/bin/arena"
 
-  V=$(proot-distro login alpine -- /root/.local/bin/opencode --version 2>/dev/null | head -1)
+  V=$("$PREFIX/bin/opencode" --version 2>/dev/null | head -1)
   if [ -n "$V" ]; then
     ok "verified: $V"
   else
-    err "launcher failed — try: proot-distro login alpine -- /root/.local/bin/opencode --version"; exit 1
+    err "launcher failed — debug: proot -0 -b \"\$PREFIX/etc/resolv.conf:/etc/resolv.conf\" \"\$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1\" --library-path \"\$PREFIX/lib/arena-musl\" \"\$PREFIX/lib/arena-bin/opencode\" --version"
+    exit 1
   fi
 
 else
@@ -376,9 +396,9 @@ fi  # end termux/native branch
 printf '\n%s  ██████████████████████████████████%s\n' "$G" "$X"
 printf '%s   ARENA CODE INSTALLED%s\n' "$B" "$X"
 if [ "$IS_TERMUX" = true ]; then
-  printf '%s   run:  opencode   (auto-launches the alpine sandbox)%s\n' "$G" "$X"
-  printf '%s   config: alpine /root/.config/opencode (not termux home)%s\n' "$DM" "$X"
-  printf '%s   shell inside sandbox: proot-distro login alpine%s\n' "$DM" "$X"
+  printf '%s   run:  opencode   (launches the musl runtime directly)%s\n' "$G" "$X"
+  printf '%s   config: ~/.config/opencode — same as desktop%s\n' "$DM" "$X"
+  printf '%s   overhead beyond the binary: ~6 MB — no distro, no rootfs%s\n' "$DM" "$X"
 else
   printf '%s   run:  opencode   (or: arena)%s\n' "$G" "$X"
   printf '%s   config lives at ~/.config/opencode — untouched by this installer%s\n' "$DM" "$X"
