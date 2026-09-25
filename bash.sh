@@ -92,7 +92,14 @@ spin() {
 }
 
 # never let a TUI take the terminal hostage when we only want --version
-if have timeout; then TMO="timeout 10"; else TMO=""; fi
+if have timeout; then
+  TMO="timeout 10"
+  # First launch of a ~140 MB bun binary under proot on a phone is SLOW —
+  # never cut it off early. Raise it if needed: ARENA_TMO=180
+  TMO_RUN="timeout ${ARENA_TMO:-90}"
+else
+  TMO=""; TMO_RUN=""
+fi
 
 # never read stdin implicitly (sha256sum -c - would swallow the script
 # in curl|bash mode) — always pass files as arguments.
@@ -126,6 +133,7 @@ env knobs:
   ARENA_PROOT=1                 termux: force the 1 MB proot DNS lane
   ARENA_PROOT=0                 termux: never use proot (no DNS without it)
   ARENA_TAKE_OPENCODE=1         termux: replace an existing `opencode` command
+  ARENA_TMO=240                 termux: seconds to wait for the first launch (default 90)
   ARENA_TERMUX=1                pretend to be termux (testing)
 HELP
   exit 0
@@ -183,7 +191,7 @@ if [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--debug" ]; then
   fi
   printf '\n%s— exec test —%s\n' "$DM" "$X"
   if [ "$IS_TERMUX" = true ]; then
-    $TMO sh "$LAUNCHER" --version > "$DOCTMP/out" 2> "$DOCTMP/err"
+    $TMO_RUN sh "$LAUNCHER" --version > "$DOCTMP/out" 2> "$DOCTMP/err"
   else
     $TMO "$LAUNCHER" --version > "$DOCTMP/out" 2> "$DOCTMP/err"
   fi
@@ -509,15 +517,42 @@ if [ "$IS_TERMUX" = true ]; then
     warn "to take the name over: ARENA_TAKE_OPENCODE=1 rerun the installer"
   fi
 
-  V=$($TMO "$PREFIX/bin/arena" --version 2>/dev/null | head -1)
+  printf '  %s  first start can take a while on a phone — waiting up to %ss%s\n' "$DM" "${ARENA_TMO:-90}" "$X"
+  VOUT="$TMP/vout"; VERR="$TMP/verr"
+  $TMO_RUN "$PREFIX/bin/arena" --version > "$VOUT" 2> "$VERR"
+  VRC=$?
+  V=$(head -1 "$VOUT" 2>/dev/null)
   if [ -n "$V" ]; then
     ok "verified: $V"
   else
-    err "launcher failed — get a debug report:"
-    err "curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | bash -s -- --doctor"
-    if [ "$NEED_PROOT" = false ]; then
-      err "if DNS dies later: re-run with ARENA_PROOT=1 to switch to the proot lane"
+    err "launcher failed (rc=$VRC) — here's what it said:"
+    if [ -s "$VERR" ]; then
+      head -8 "$VERR" | sed 's/^/     /'
+    else
+      printf '     (no output at all — it hung or died silently)\n'
     fi
+    # full context to a file so one paste is enough
+    AUTO="$HOME/arena-doctor.txt"
+    {
+      printf '── ARENA CODE — install failure ────────────\n'
+      printf 'date       : %s\n' "$(date)"
+      printf 'uname      : %s\n' "$(uname -srm)"
+      printf 'android    : %s (sdk %s)\n' "$(getprop ro.build.version.release 2>/dev/null)" "$(getprop ro.build.version.sdk 2>/dev/null)"
+      printf 'prefix     : %s\n' "$PREFIX"
+      printf 'dns lane   : %s\n' "$([ "$NEED_PROOT" = true ] && printf 'proot' || printf bare)"
+      printf 'resolv.conf: %s\n' "$([ -s /etc/resolv.conf ] && printf present || printf MISSING)"
+      printf 'rc         : %s\n' "$VRC"
+      printf 'stdout     : %s\n' "$(head -c 300 "$VOUT" | tr '\n' ' ')"
+      printf 'stderr     :\n'; head -20 "$VERR" | sed 's/^/  /'
+      printf 'launcher   :\n'; head -20 "$PREFIX/bin/arena" | sed 's/^/  /'
+      printf 'bare loader test (no proot):\n'
+      $TMO_RUN "$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1" --library-path "$PREFIX/lib/arena-musl" "$PREFIX/lib/arena-bin/opencode" --version 2>&1 | head -5 | sed 's/^/  /'
+      printf 'trace (last 15):\n'
+      $TMO_RUN sh -x "$PREFIX/bin/arena" --version 2>&1 | tail -15 | sed 's/^/  /'
+      printf 'report end.\n'
+    } > "$AUTO" 2>&1
+    err "full report → $AUTO"
+    err "longer wait to try again: ARENA_TMO=240 rerun the installer"
     exit 1
   fi
 
