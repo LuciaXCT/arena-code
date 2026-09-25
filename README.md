@@ -17,7 +17,7 @@ curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | 
 
 What it does:
 
-1. Detects OS/arch (linux/darwin, x64/arm64, WSL-aware)
+1. Detects OS/arch (linux/darwin, x64/arm64, WSL-aware, Termux-aware)
 2. Downloads `arena-code-<version>-<os>-<arch>.zip` from the latest Arena release
 3. Verifies the sha256 checksum against the published `.sha256` file
 4. Installs the single static binary to `~/.local/bin/opencode`
@@ -36,6 +36,21 @@ Uninstall:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | bash -s -- --uninstall
 ```
+
+### Termux (Android)
+
+Same one-liner, run inside Termux. The script detects Termux and takes a different lane:
+
+1. Installs `proot-distro` via `pkg` (asks first) and an Alpine rootfs (~10 MB)
+2. Downloads the `linux-arm64-musl` build into the Alpine sandbox
+3. Writes `$PREFIX/bin/opencode` + `$PREFIX/bin/arena` launchers, so you still just run `opencode`
+
+Android's bionic libc can't run the binary directly — the Alpine proot sandbox is the same
+trick Termux users run upstream opencode with. Config lives inside the sandbox at
+`/root/.config/opencode`; enter it directly with `proot-distro login alpine`.
+
+Uninstall removes the launchers and the binary but keeps the Alpine distro
+(`proot-distro remove alpine` deletes it fully).
 
 ### Why not npm?
 

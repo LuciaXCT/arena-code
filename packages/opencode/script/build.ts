@@ -18,6 +18,7 @@ import { Script } from "@opencode-ai/script"
 const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
+const targetFlag = process.argv.find((arg) => arg.startsWith("--target="))?.slice("--target=".length)
 
 const allTargets: {
   os: string
@@ -78,7 +79,14 @@ const allTargets: {
   },
 ]
 
-const targets = singleFlag
+const targetName = (item: (typeof allTargets)[number]) =>
+  [item.os === "win32" ? "windows" : item.os, item.arch, item.avx2 === false ? "baseline" : undefined, item.abi]
+    .filter(Boolean)
+    .join("-")
+
+const targets = targetFlag
+  ? allTargets.filter((item) => targetName(item) === targetFlag)
+  : singleFlag
   ? allTargets.filter((item) => {
       if (item.os !== process.platform || item.arch !== process.arch) {
         return false
@@ -93,6 +101,12 @@ const targets = singleFlag
       return true
     })
   : allTargets
+
+if (targetFlag && targets.length === 0) {
+  console.error(`unknown target: ${targetFlag}`)
+  console.error(`available: ${allTargets.map(targetName).join(" ")}`)
+  process.exit(1)
+}
 
 await $`rm -rf dist`
 

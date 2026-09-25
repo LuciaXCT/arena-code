@@ -20,6 +20,14 @@ BIN_DIR="$HOME/.local/bin"
 BIN_NAME="opencode"
 SYM_NAME="arena"
 
+# single source of truth — defined before any branch reads it
+IS_TERMUX=false
+if [ -d "/data/data/com.termux" ] || [ "${ARENA_TERMUX:-}" = "1" ]; then
+  IS_TERMUX=true
+fi
+BIN_DIR="${PREFIX:-}/bin"
+[ "$IS_TERMUX" = true ] || BIN_DIR="$HOME/.local/bin"
+
 # ─── palette ────────────────────────────────────────────────
 if [ -t 1 ]; then
   R=$'\e[31m'; G=$'\e[32m'; Y=$'\e[33m'; C=$'\e[36m'; B=$'\e[1m'; DM=$'\e[2m'; X=$'\e[0m'
@@ -80,6 +88,17 @@ sha_file() {
 # ─── uninstall ──────────────────────────────────────────────
 if [ "${1:-}" = "--uninstall" ]; then
   step "0/5" "Uninstall"
+  if [ "$IS_TERMUX" = true ]; then
+    for F in "$PREFIX/bin/opencode" "$PREFIX/bin/arena"; do
+      [ -f "$F" ] && rm -f "$F" && ok "removed $F"
+    done
+    ROOTFS="$PREFIX/var/lib/proot-distro/installed-rootfs/alpine"
+    if [ -f "$ROOTFS/root/.local/bin/opencode" ]; then
+      rm -f "$ROOTFS/root/.local/bin/opencode" && ok "removed binary from alpine rootfs"
+    fi
+    warn "alpine distro kept — remove fully with: proot-distro remove alpine"
+    exit 0
+  fi
   for F in "$BIN_DIR/$BIN_NAME" "$BIN_DIR/$SYM_NAME"; do
     if [ -L "$F" ] || [ -f "$F" ]; then
       rm -f "$F" && ok "removed $F"
@@ -118,10 +137,6 @@ printf '%s   AI coding agent TUI · free-model auto-rotate · no npm%s\n\n' "$B"
 # ─── 1/5 environment ────────────────────────────────────────
 step "1/5" "Environment"
 
-if [ -d "/data/data/com.termux" ]; then
-  err "Termux is not supported — no prebuilt android binary"; exit 1
-fi
-
 OS_RAW=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$OS_RAW" in
   linux)  OS="linux" ;;
@@ -136,7 +151,13 @@ case "$ARCH_RAW" in
   *) err "unsupported architecture: $ARCH_RAW"; exit 1 ;;
 esac
 
-grep -qi microsoft /proc/version 2>/dev/null && ok "WSL detected" || ok "$OS-$ARCH detected"
+if [ "$IS_TERMUX" = true ]; then
+  ok "Termux (Android) detected — agent runs in an alpine proot sandbox"
+elif grep -qi microsoft /proc/version 2>/dev/null; then
+  ok "WSL detected"
+else
+  ok "$OS-$ARCH detected"
+fi
 
 # ─── 2/5 dependencies ───────────────────────────────────────
 step "2/5" "Dependencies"
@@ -147,7 +168,13 @@ EXTRACT=""
 have unzip   && EXTRACT="unzip"
 [ -z "$EXTRACT" ] && have bsdtar && EXTRACT="bsdtar"
 [ -z "$EXTRACT" ] && have python3 && EXTRACT="python3"
-[ -z "$EXTRACT" ] && { err "need one of: unzip, bsdtar, python3 (to unpack the zip)"; exit 1; }
+[ -z "$EXTRACT" ] && have busybox && EXTRACT="busybox-unzip"
+if [ -z "$EXTRACT" ]; then
+  if [ "$IS_TERMUX" = true ] && have pkg && ask_yn "install unzip via pkg?" Y; then
+    pkg install -y unzip >/dev/null 2>&1 && EXTRACT="unzip"
+  fi
+fi
+[ -z "$EXTRACT" ] && { err "need one of: unzip, bsdtar, python3, busybox (to unpack the zip)"; exit 1; }
 ok "curl + $EXTRACT ready"
 
 # ─── 3/5 version ────────────────────────────────────────────
@@ -172,7 +199,11 @@ fi
 case "$TAG" in v*) ;; *) TAG="v$TAG" ;; esac
 VER=${TAG#v}
 
-ASSET="arena-code-$VER-$OS-$ARCH.zip"
+if [ "$IS_TERMUX" = true ]; then
+  ASSET="arena-code-$VER-linux-arm64-musl.zip"
+else
+  ASSET="arena-code-$VER-$OS-$ARCH.zip"
+fi
 BASE="https://github.com/$REPO/releases/download/$TAG"
 ok "asset: $ASSET"
 
@@ -180,7 +211,12 @@ ok "asset: $ASSET"
 printf '\n%s── SUMMARY ──────────────────────────────%s\n' "$B" "$X"
 printf '  version   : %s\n' "$TAG"
 printf '  platform  : %s-%s\n' "$OS" "$ARCH"
-printf '  binary    : %s/%s\n' "$BIN_DIR" "$BIN_NAME"
+if [ "$IS_TERMUX" = true ]; then
+  printf '  binary    : alpine proot → /root/.local/bin/opencode\n'
+  printf '  launchers : $PREFIX/bin/opencode + $PREFIX/bin/arena\n'
+else
+  printf '  binary    : %s/%s\n' "$BIN_DIR" "$BIN_NAME"
+fi
 printf '  npm used  : no — single static binary\n'
 hr
 if [ "$INTERACTIVE" = 1 ]; then
@@ -214,6 +250,7 @@ case "$EXTRACT" in
   unzip)   unzip -oq "$TMP/$ASSET" -d "$TMP/x" ;;
   bsdtar)  bsdtar -xf "$TMP/$ASSET" -C "$TMP/x" ;;
   python3) mkdir -p "$TMP/x" && python3 -m zipfile -e "$TMP/$ASSET" "$TMP/x" ;;
+  busybox-unzip) mkdir -p "$TMP/x" && busybox unzip -o "$TMP/$ASSET" -d "$TMP/x" >/dev/null ;;
 esac
 BIN_SRC="$TMP/x/opencode"
 [ -f "$BIN_SRC" ] || { err "unexpected zip layout — no opencode binary inside"; exit 1; }
@@ -221,6 +258,67 @@ ok "extracted"
 
 # ─── 5/5 install ────────────────────────────────────────────
 step "5/5" "Install"
+
+if [ "$IS_TERMUX" = true ]; then
+  ROOTFS="$PREFIX/var/lib/proot-distro/installed-rootfs/alpine"
+
+  if ! have proot-distro; then
+    if ask_yn "install proot-distro via pkg? (runs the agent in an alpine sandbox)" Y; then
+      pkg install -y proot-distro >/dev/null 2>&1 \
+        && ok "proot-distro installed" \
+        || { err "pkg install failed — run manually: pkg install proot-distro"; exit 1; }
+    else
+      err "termux needs proot-distro — aborting"; exit 1
+    fi
+  else
+    ok "proot-distro present"
+  fi
+
+  if [ ! -d "$ROOTFS" ]; then
+    if ask_yn "download the alpine rootfs (~10 MB)?" Y; then
+      proot-distro install alpine >/dev/null 2>&1 \
+        && ok "alpine installed" \
+        || { err "proot-distro install alpine failed"; exit 1; }
+    else
+      err "aborted — alpine rootfs is required"; exit 1
+    fi
+  else
+    ok "alpine rootfs present"
+  fi
+
+  mkdir -p "$ROOTFS/root/.local/bin"
+
+  if [ -f "$ROOTFS/root/.local/bin/opencode" ]; then
+    BAK="$ROOTFS/root/.local/bin/opencode.arena-bak.$(date +%s)"
+    cp "$ROOTFS/root/.local/bin/opencode" "$BAK" && warn "backed up old binary → $BAK"
+  fi
+
+  install -m 755 "$BIN_SRC" "$ROOTFS/root/.local/bin/opencode"
+  ok "binary → alpine:/root/.local/bin/opencode"
+
+  proot-distro login alpine -- apk add --no-cache ncurses-terminfo libstdc++ libgcc >/dev/null 2>&1 & SPID=$!
+  spin "apk bootstrap (ncurses-terminfo libstdc++ libgcc)" $SPID
+  wait $SPID \
+    && ok "alpine deps ready" \
+    || warn "apk bootstrap failed — run: proot-distro login alpine -- apk add ncurses-terminfo libstdc++ libgcc"
+
+  for L in opencode arena; do
+    cat > "$PREFIX/bin/$L" <<LAUNCHER
+#!/data/data/com.termux/files/usr/bin/sh
+exec proot-distro login alpine -- /root/.local/bin/opencode "\$@"
+LAUNCHER
+    chmod +x "$PREFIX/bin/$L"
+  done
+  ok "launchers → \$PREFIX/bin/opencode + \$PREFIX/bin/arena"
+
+  V=$(proot-distro login alpine -- /root/.local/bin/opencode --version 2>/dev/null | head -1)
+  if [ -n "$V" ]; then
+    ok "verified: $V"
+  else
+    err "launcher failed — try: proot-distro login alpine -- /root/.local/bin/opencode --version"; exit 1
+  fi
+
+else
 
 mkdir -p "$BIN_DIR"
 
@@ -272,11 +370,19 @@ else
   err "binary won't run — check $BIN_DIR/$BIN_NAME"; exit 1
 fi
 
+fi  # end termux/native branch
+
 # ─── done ───────────────────────────────────────────────────
 printf '\n%s  ██████████████████████████████████%s\n' "$G" "$X"
 printf '%s   ARENA CODE INSTALLED%s\n' "$B" "$X"
-printf '%s   run:  opencode   (or: arena)%s\n' "$G" "$X"
+if [ "$IS_TERMUX" = true ]; then
+  printf '%s   run:  opencode   (auto-launches the alpine sandbox)%s\n' "$G" "$X"
+  printf '%s   config: alpine /root/.config/opencode (not termux home)%s\n' "$DM" "$X"
+  printf '%s   shell inside sandbox: proot-distro login alpine%s\n' "$DM" "$X"
+else
+  printf '%s   run:  opencode   (or: arena)%s\n' "$G" "$X"
+  printf '%s   config lives at ~/.config/opencode — untouched by this installer%s\n' "$DM" "$X"
+fi
 printf '%s   version: %s · no npm involved%s\n' "$DM" "$TAG" "$X"
 printf '%s   uninstall: this script with --uninstall%s\n' "$DM" "$X"
-printf '%s   config lives at ~/.config/opencode — untouched by this installer%s\n' "$DM" "$X"
 printf '%s  ██████████████████████████████████%s\n\n' "$G" "$X"
