@@ -235,7 +235,7 @@ export function Home() {
           alignItems="center"
           justifyContent="center"
           paddingLeft={2}
-          paddingRight={2}
+          paddingRight={wide() ? 32 : 2}
           gap={spacing()}
         >
           <OldBanner />

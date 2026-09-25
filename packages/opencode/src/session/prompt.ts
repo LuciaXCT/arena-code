@@ -1672,5 +1672,24 @@ export namespace SessionPrompt {
         const title = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
         draft.title = title
       })
+
+    // The title agent runs on the small model, and some free lanes reject it
+    // outright (403 / FreeTierError). Fall back to the first thing the user
+    // actually typed so a session never sits on a bare timestamp forever.
+    const source = hasOnlySubtaskParts
+      ? subtaskParts.map((p) => p.prompt).join(" ")
+      : firstRealUser.parts
+          .filter((p) => p.type === "text" && "text" in p)
+          .map((p) => (p as { text: string }).text)
+          .join(" ")
+    const derived = source
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0)
+    if (!derived) return
+
+    Session.update(input.session.id, (draft) => {
+      draft.title = derived.length > 100 ? derived.substring(0, 97) + "..." : derived
+    })
   }
 }

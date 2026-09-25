@@ -39,10 +39,12 @@ export namespace Plugin {
         const lastAtIndex = plugin.lastIndexOf("@")
         const pkg = lastAtIndex > 0 ? plugin.substring(0, lastAtIndex) : plugin
         const version = lastAtIndex > 0 ? plugin.substring(lastAtIndex + 1) : "latest"
-        const builtin = BUILTIN.some((x) => x.startsWith(pkg + "@"))
+        // A plugin that cannot be installed must not take the whole TUI down.
+        // Concurrent launches race on the install lock, and an offline machine
+        // has no cache at all - neither should be fatal at startup.
         plugin = await BunProc.install(pkg, version).catch((err) => {
-          if (builtin) return ""
-          throw err
+          log.warn("plugin install failed, skipping", { plugin: pkg, version, err: String(err) })
+          return ""
         })
         if (!plugin) continue
       }
