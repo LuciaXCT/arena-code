@@ -42,18 +42,32 @@ curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | 
 Same one-liner, run inside Termux. The script detects Termux and takes a different lane —
 **no distro, no rootfs, no proot-distro**:
 
-1. Installs `proot` via `pkg` (asks first, ~1 MB) — used only to bind `/etc/resolv.conf`,
-   `/etc/hosts`, `/tmp` and `$HOME` for the binary
-2. Grabs just the three musl runtime libs (`ld-musl`, `libstdc++`, `libgcc`, ~4 MB total)
+1. Grabs just the three musl runtime libs (`ld-musl`, `libstdc++`, `libgcc`, ~4 MB total)
    straight from Alpine's CDN
-3. Drops the `linux-arm64-musl` binary in `$PREFIX/lib/arena-bin/` and writes
+2. Drops the `linux-arm64-musl` binary in `$PREFIX/lib/arena-bin/` and writes
    `$PREFIX/bin/opencode` + `$PREFIX/bin/arena` launchers
+3. Only if the device hides `/etc/resolv.conf` (the usual case on Android), installs `proot`
+   (~1 MB, asks first) so DNS can be bound — nothing else uses it
 
 Android's bionic libc can't run the binary directly, so the launcher invokes the musl loader
 explicitly: `ld-musl-aarch64.so.1 --library-path … opencode`. Total overhead beyond the
-binary is ~6 MB. Config lives at the normal `~/.config/opencode`, same as desktop.
+binary is **~4 MB** bare, or ~5 MB with the proot DNS lane. Config lives at the normal
+`~/.config/opencode`, same as desktop.
+
+Force either lane: `ARENA_PROOT=1` (always proot) or `ARENA_PROOT=0` (never).
 
 Uninstall removes the launchers, the binary, and the musl libs.
+
+### Something broke?
+
+Run the doctor and paste the report — it prints the environment, DNS setup, installed files,
+launcher contents, an exec trace with stderr, and a connectivity check:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | bash -s -- --doctor
+```
+
+`bash -s -- --help` lists all flags and env knobs (`ARENA_VERSION`, `ARENA_PROOT`).
 
 ### Why not npm?
 

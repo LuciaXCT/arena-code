@@ -25,6 +25,20 @@ IS_TERMUX=false
 if [ -d "/data/data/com.termux" ] || [ "${ARENA_TERMUX:-}" = "1" ]; then
   IS_TERMUX=true
 fi
+
+# Termux DNS: musl resolves through the absolute /etc/resolv.conf with no env
+# override. If the device exposes one, the binary runs bare (zero extra
+# packages). Otherwise a ~1 MB proot binds just that file — still no distro.
+#   ARENA_PROOT=1 force proot   ARENA_PROOT=0 force no-proot
+NEED_PROOT=false
+if [ "$IS_TERMUX" = true ]; then
+  NEED_PROOT=true
+  if [ "${ARENA_PROOT:-auto}" = "0" ]; then
+    NEED_PROOT=false
+  elif [ "${ARENA_PROOT:-auto}" != "1" ] && [ -s /etc/resolv.conf ]; then
+    NEED_PROOT=false
+  fi
+fi
 BIN_DIR="${PREFIX:-}/bin"
 [ "$IS_TERMUX" = true ] || BIN_DIR="$HOME/.local/bin"
 
@@ -84,6 +98,94 @@ sha_file() {
   else shasum -a 256 "$1" | cut -d' ' -f1
   fi
 }
+
+# ─── help ───────────────────────────────────────────────────
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+  cat <<'HELP'
+Arena Code — installer
+
+  curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | bash
+      install or upgrade
+
+  ... | bash -s -- --uninstall
+      remove the binary, launchers and musl libs
+
+  ... | bash -s -- --doctor
+      print a debug report — paste it when something breaks
+
+env knobs:
+  ARENA_VERSION=1.0.0-arena.1   pin a specific release
+  ARENA_PROOT=1                 termux: force the 1 MB proot DNS lane
+  ARENA_PROOT=0                 termux: never use proot (no DNS without it)
+  ARENA_TERMUX=1                pretend to be termux (testing)
+HELP
+  exit 0
+fi
+
+# ─── doctor ─────────────────────────────────────────────────
+if [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--debug" ]; then
+  DOCTMP="$(mktemp -d)"
+  trap 'rm -rf "$DOCTMP"' EXIT
+  printf '%s── ARENA CODE DOCTOR ─────────────────────%s\n' "$B" "$X"
+  printf 'date       : %s\n' "$(date)"
+  printf 'uname      : %s\n' "$(uname -srm)"
+  printf 'backend    : %s\n' "$([ "$IS_TERMUX" = true ] && printf termux || printf native)"
+  [ -n "${PREFIX:-}" ] && printf 'prefix     : %s\n' "$PREFIX"
+  printf 'home       : %s\n' "$HOME"
+  printf 'dns lane   : %s\n' "$([ "$NEED_PROOT" = true ] && printf 'proot (~1 MB)' || printf 'bare (no proot)')"
+  if [ "$IS_TERMUX" = true ]; then
+    printf 'android    : %s (sdk %s)\n' "$(getprop ro.build.version.release 2>/dev/null)" "$(getprop ro.build.version.sdk 2>/dev/null)"
+    printf 'resolv.conf: %s\n' "$([ -s /etc/resolv.conf ] && printf present || printf MISSING)"
+    [ -r /etc/resolv.conf ] && sed 's/^/             /' /etc/resolv.conf
+    printf 'dns prop   : %s\n' "$(getprop net.dns1 2>/dev/null)"
+  fi
+  printf 'tools      : '
+  for T in curl unzip tar proot busybox python3; do have "$T" && printf '%s ' "$T"; done
+  printf '\nstorage    : '
+  df -h "$HOME" 2>/dev/null | tail -1 | awk '{print $4" free of "$2}'
+  printf 'version    : %s\n' "$($([ "$IS_TERMUX" = true ] && printf %s "$PREFIX/bin/opencode" || printf %s "$BIN_DIR/$BIN_NAME") --version 2>/dev/null | head -1 || true)"
+  if [ "$IS_TERMUX" = true ]; then
+    printf '\n%s— files —%s\n' "$DM" "$X"
+    for F in "$PREFIX/lib/arena-bin/opencode" "$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1" "$PREFIX/lib/arena-musl/libc.musl-aarch64.so.1" "$PREFIX/lib/arena-musl/libstdc++.so.6" "$PREFIX/lib/arena-musl/libgcc_s.so.1"; do
+      if [ -e "$F" ]; then
+        printf '  ok   %s (%s B)\n' "$F" "$(wc -c < "$F" 2>/dev/null | tr -d ' ')"
+      else
+        printf '  MISS %s\n' "$F"
+      fi
+    done
+    LEGACY="$PREFIX/var/lib/proot-distro/installed-rootfs/alpine"
+    [ -d "$LEGACY" ] && warn "legacy alpine rootfs present ($(du -sh "$LEGACY" 2>/dev/null | cut -f1)) — reclaim: proot-distro remove alpine"
+    printf '\n%s— launcher —%s\n' "$DM" "$X"
+    if [ -f "$PREFIX/bin/opencode" ]; then sed 's/^/  /' "$PREFIX/bin/opencode"; else printf '  MISSING\n'; fi
+  fi
+  printf '\n%s— exec test —%s\n' "$DM" "$X"
+  if [ "$IS_TERMUX" = true ]; then
+    sh "$PREFIX/bin/opencode" --version > "$DOCTMP/out" 2> "$DOCTMP/err"
+  else
+    "$BIN_DIR/$BIN_NAME" --version > "$DOCTMP/out" 2> "$DOCTMP/err"
+  fi
+  RC=$?
+  printf 'rc         : %s\n' "$RC"
+  printf 'stdout     : %s\n' "$(head -c 300 "$DOCTMP/out" | tr '\n' ' ')"
+  if [ "$RC" != "0" ]; then
+    if [ -s "$DOCTMP/err" ]; then
+      printf 'stderr:\n'
+      tail -c 1200 "$DOCTMP/err" | sed 's/^/  /'
+    fi
+    if [ "$IS_TERMUX" = true ]; then
+      printf 'trace (last 12):\n'
+      sh -x "$PREFIX/bin/opencode" --version 2>&1 | tail -12 | sed 's/^/  /'
+    fi
+  fi
+  if [ "$IS_TERMUX" = true ]; then
+    printf '\n%s— raw loader test (bypasses proot) —%s\n' "$DM" "$X"
+    "$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1" --library-path "$PREFIX/lib/arena-musl" "$PREFIX/lib/arena-bin/opencode" --version 2>&1 | tail -5 | sed 's/^/  /'
+  fi
+  printf '\n%s— net test —%s\n' "$DM" "$X"
+  printf 'api.github.com: %s\n' "$(curl -s -o /dev/null -w '%{http_code}' -m 8 https://api.github.com 2>/dev/null || printf FAIL)"
+  printf '\n%s  copy everything above and paste it to the rat%s\n\n' "$B" "$X"
+  exit 0
+fi
 
 # ─── uninstall ──────────────────────────────────────────────
 if [ "${1:-}" = "--uninstall" ]; then
@@ -154,7 +256,12 @@ case "$ARCH_RAW" in
 esac
 
 if [ "$IS_TERMUX" = true ]; then
-  ok "Termux (Android) detected — musl runtime, no distro needed"
+  ok "Termux (Android) detected — musl runtime, no distro"
+  if [ "$NEED_PROOT" = true ]; then
+    ok "device hides /etc/resolv.conf → proot (~1 MB) wires DNS"
+  else
+    ok "device exposes /etc/resolv.conf → runs bare, no proot"
+  fi
 elif grep -qi microsoft /proc/version 2>/dev/null; then
   ok "WSL detected"
 else
@@ -215,7 +322,11 @@ printf '  version   : %s\n' "$TAG"
 printf '  platform  : %s-%s\n' "$OS" "$ARCH"
 if [ "$IS_TERMUX" = true ]; then
   printf '  binary    : $PREFIX/lib/arena-bin/opencode\n'
-  printf '  runtime   : musl libs (~4 MB) + proot (~1 MB) — NO distro\n'
+  if [ "$NEED_PROOT" = true ]; then
+    printf '  runtime   : musl libs + proot (~5 MB) — NO distro\n'
+  else
+    printf '  runtime   : musl libs only (~4 MB) — NO proot, NO distro\n'
+  fi
   printf '  launchers : $PREFIX/bin/opencode + $PREFIX/bin/arena\n'
 else
   printf '  binary    : %s/%s\n' "$BIN_DIR" "$BIN_NAME"
@@ -266,18 +377,24 @@ if [ "$IS_TERMUX" = true ]; then
   ARENA_BIN="$PREFIX/lib/arena-bin"
   ARENA_LIB="$PREFIX/lib/arena-musl"
 
-  # proot (~1 MB) — used ONLY to bind the few absolute paths the musl
-  # binary expects (/etc/resolv.conf etc.). No distro, no rootfs.
-  if ! have proot; then
-    if ask_yn "install proot via pkg? (~1 MB — wires up DNS, nothing else)" Y; then
-      pkg install -y proot >/dev/null 2>&1 \
-        && ok "proot installed" \
-        || { err "pkg install failed — run manually: pkg install proot"; exit 1; }
+  # proot (~1 MB) — used ONLY when the device hides /etc/resolv.conf.
+  # No distro, no rootfs — see NEED_PROOT above.
+  if [ "$NEED_PROOT" = true ]; then
+    if ! have proot; then
+      if ask_yn "install proot via pkg? (~1 MB — wires up DNS only)" Y; then
+        pkg install -y proot >/dev/null 2>&1 \
+          && ok "proot installed" \
+          || { err "pkg install failed — run manually: pkg install proot"; exit 1; }
+      else
+        err "this device hides /etc/resolv.conf, so DNS needs proot — aborting"
+        err "(only ~1 MB, no distro — set ARENA_PROOT=0 to force no-proot)"
+        exit 1
+      fi
     else
-      err "termux needs proot — aborting"; exit 1
+      ok "proot present"
     fi
   else
-    ok "proot present"
+    ok "no proot needed — /etc/resolv.conf is readable"
   fi
 
   # musl runtime straight from alpine's CDN — ~4 MB total, no distro
@@ -313,20 +430,23 @@ if [ "$IS_TERMUX" = true ]; then
 
   [ -f "$PREFIX/etc/resolv.conf" ] || warn "$PREFIX/etc/resolv.conf missing — if DNS fails: pkg install resolv-conf"
 
+  write_launcher() {
+    local pre=""
+    if [ "$NEED_PROOT" = true ]; then
+      pre='proot -0 -b "$PREFIX/etc/resolv.conf:/etc/resolv.conf" -b "$PREFIX/etc/hosts:/etc/hosts" -b "$PREFIX/tmp:/tmp" -b "$HOME:/root" '
+    fi
+    {
+      echo '#!/data/data/com.termux/files/usr/bin/sh'
+      echo 'LIB="$PREFIX/lib/arena-musl"'
+      echo 'export TMPDIR="$PREFIX/tmp"'
+      echo 'mkdir -p "$TMPDIR" 2>/dev/null'
+      echo "exec ${pre}\"\$LIB/ld-musl-aarch64.so.1\" --library-path \"\$LIB\" \"\$PREFIX/lib/arena-bin/opencode\" \"\$@\""
+    } > "$1"
+    chmod +x "$1"
+  }
+
   for L in opencode arena; do
-    cat > "$PREFIX/bin/$L" <<LAUNCHER
-#!/data/data/com.termux/files/usr/bin/sh
-LIB="\$PREFIX/lib/arena-musl"
-export TMPDIR="\$PREFIX/tmp"
-mkdir -p "\$TMPDIR" 2>/dev/null
-exec proot -0 \
-  -b "\$PREFIX/etc/resolv.conf:/etc/resolv.conf" \
-  -b "\$PREFIX/etc/hosts:/etc/hosts" \
-  -b "\$PREFIX/tmp:/tmp" \
-  -b "\$HOME:/root" \
-  "\$LIB/ld-musl-aarch64.so.1" --library-path "\$LIB" "\$PREFIX/lib/arena-bin/opencode" "\$@"
-LAUNCHER
-    chmod +x "$PREFIX/bin/$L"
+    write_launcher "$PREFIX/bin/$L"
   done
   ok "launchers → \$PREFIX/bin/opencode + \$PREFIX/bin/arena"
 
@@ -334,7 +454,11 @@ LAUNCHER
   if [ -n "$V" ]; then
     ok "verified: $V"
   else
-    err "launcher failed — debug: proot -0 -b \"\$PREFIX/etc/resolv.conf:/etc/resolv.conf\" \"\$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1\" --library-path \"\$PREFIX/lib/arena-musl\" \"\$PREFIX/lib/arena-bin/opencode\" --version"
+    err "launcher failed — get a debug report:"
+    err "curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | bash -s -- --doctor"
+    if [ "$NEED_PROOT" = false ]; then
+      err "if DNS dies later: re-run with ARENA_PROOT=1 to switch to the proot lane"
+    fi
     exit 1
   fi
 
@@ -398,7 +522,11 @@ printf '%s   ARENA CODE INSTALLED%s\n' "$B" "$X"
 if [ "$IS_TERMUX" = true ]; then
   printf '%s   run:  opencode   (launches the musl runtime directly)%s\n' "$G" "$X"
   printf '%s   config: ~/.config/opencode — same as desktop%s\n' "$DM" "$X"
-  printf '%s   overhead beyond the binary: ~6 MB — no distro, no rootfs%s\n' "$DM" "$X"
+  if [ "$NEED_PROOT" = true ]; then
+    printf '%s   overhead: ~5 MB (musl libs + 1 MB proot) — no distro, no rootfs%s\n' "$DM" "$X"
+  else
+    printf '%s   overhead: ~4 MB (musl libs only) — no proot, no distro%s\n' "$DM" "$X"
+  fi
 else
   printf '%s   run:  opencode   (or: arena)%s\n' "$G" "$X"
   printf '%s   config lives at ~/.config/opencode — untouched by this installer%s\n' "$DM" "$X"
