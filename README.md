@@ -44,16 +44,29 @@ Same one-liner, run inside Termux. The script detects Termux and takes a differe
 
 1. Grabs just the three musl runtime libs (`ld-musl`, `libstdc++`, `libgcc`, ~4 MB total)
    straight from Alpine's CDN
-2. Drops the `linux-arm64-musl` binary in `$PREFIX/lib/arena-bin/` and writes an `arena`
-   launcher — and takes the `opencode` name **only if it's free**. An `opencode` you already
-   have (a native Termux build, for instance) is left exactly as it is.
+2. Installs a Termux-specific `linux-arm64-musl` build whose `PT_INTERP` is rewritten to
+   `$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1` (see below) into `$PREFIX/lib/arena-bin/`,
+   and writes an `arena` launcher — taking the `opencode` name **only if it's free**. An
+   `opencode` you already have (a native Termux build, for instance) is left as it is.
 3. Only if the device hides `/etc/resolv.conf` (the usual case on Android), installs `proot`
    (~1 MB, asks first) plus `resolv-conf` so DNS can be bound — nothing else uses it
 
-Android's bionic libc can't run the binary directly, so the launcher invokes the musl loader
-explicitly: `ld-musl-aarch64.so.1 --library-path … opencode`. Total overhead beyond the
-binary is **~4 MB** bare, or ~5 MB with the proot DNS lane — compare ~300 MB for a
-proot-distro rootfs. Config lives at the normal `~/.config/opencode`, same as desktop.
+Termux has no `/lib/ld-musl-aarch64.so.1`, so the interpreter path baked into the binary is
+rewritten to the copy under `$PREFIX` (`tools/patch-interp.py` — the longer string is parked
+in inter-segment padding, so nothing in the loaded image, and nothing of bun's appended
+payload, moves). Total overhead beyond the binary is **~4 MB** bare, or ~5 MB with the proot
+DNS lane — compare ~300 MB for a proot-distro rootfs. Config lives at the normal
+`~/.config/opencode`, same as desktop.
+
+Two traps that lane avoids, both found on a real Android 16 phone:
+
+- **Calling the loader yourself breaks bun.** `ld-musl-aarch64.so.1 --library-path … opencode`
+  makes the kernel report the *loader* as `/proc/self/exe`, and bun's single-file payload
+  lookup then quietly falls back to plain bun (`--version` prints bun's own version). The
+  kernel has to exec the binary itself.
+- **`LD_PRELOAD` must be cleared.** Termux's `termux-exec` preloads a bionic shim that musl's
+  loader can't relocate (`__system_property_get: symbol not found`). The launcher unsets it
+  and sets `LD_LIBRARY_PATH` to the musl lib dir instead.
 
 Force either lane: `ARENA_PROOT=1` (always proot) or `ARENA_PROOT=0` (never).
 

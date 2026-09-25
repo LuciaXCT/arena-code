@@ -209,8 +209,10 @@ if [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--debug" ]; then
     fi
   fi
   if [ "$IS_TERMUX" = true ]; then
-    printf '\n— raw loader test (bypasses proot) —\n'
-    $TMO "$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1" --library-path "$PREFIX/lib/arena-musl" "$PREFIX/lib/arena-bin/opencode" --version 2>&1 | tail -5 | sed 's/^/  /'
+    printf '\n— direct exec test (no proot) —\n'
+    env -u LD_PRELOAD LD_LIBRARY_PATH="$PREFIX/lib/arena-musl" $TMO_RUN "$PREFIX/lib/arena-bin/opencode" --version 2>&1 | head -8 | sed 's/^/  /'
+    printf 'interp     : %s\n' "$(grep -ao '[^[:cntrl:]]*/arena-musl/ld-musl-aarch64.so.1' "$PREFIX/lib/arena-bin/opencode" 2>/dev/null | head -1)"
+    printf 'env preload: %s\n' "${LD_PRELOAD:-（none）}"
   fi
   printf '\n— net test —\n'
   printf 'api.github.com: %s\n' "$(curl -s -o /dev/null -w '%{http_code}' -m 8 https://api.github.com 2>/dev/null || printf FAIL)"
@@ -354,7 +356,9 @@ case "$TAG" in v*) ;; *) TAG="v$TAG" ;; esac
 VER=${TAG#v}
 
 if [ "$IS_TERMUX" = true ]; then
-  ASSET="arena-code-$VER-linux-arm64-musl.zip"
+  # This build has PT_INTERP rewritten to the Termux loader path, so the
+  # kernel runs it straight off the shelf — no loader invocation needed.
+  ASSET="arena-code-$VER-termux-arm64.zip"
 else
   ASSET="arena-code-$VER-$OS-$ARCH.zip"
 fi
@@ -485,6 +489,11 @@ if [ "$IS_TERMUX" = true ]; then
   fi
   install -m 755 "$BIN_SRC" "$ARENA_BIN/opencode"
   ok "binary → $ARENA_BIN/opencode"
+  if grep -aq "/arena-musl/ld-musl-aarch64.so.1" "$ARENA_BIN/opencode" 2>/dev/null; then
+    ok "interpreter → $ARENA_LIB/ld-musl-aarch64.so.1 (direct exec)"
+  else
+    warn "this asset isn't Termux-patched — tell the rat, don't just run it"
+  fi
 
   write_launcher() {
     local pre=""
@@ -493,10 +502,14 @@ if [ "$IS_TERMUX" = true ]; then
     fi
     {
       echo '#!/data/data/com.termux/files/usr/bin/sh'
+      # termux-exec preloads a bionic shim that musl's loader can't relocate
+      # ("Error relocating ... __system_property_get: symbol not found").
+      echo 'unset LD_PRELOAD LD_LIBRARY_PATH'
       echo 'LIB="$PREFIX/lib/arena-musl"'
+      echo 'export LD_LIBRARY_PATH="$LIB"'
       echo 'export TMPDIR="$PREFIX/tmp"'
       echo 'mkdir -p "$TMPDIR" 2>/dev/null'
-      echo "exec ${pre}\"\$LIB/ld-musl-aarch64.so.1\" --library-path \"\$LIB\" \"\$PREFIX/lib/arena-bin/opencode\" \"\$@\""
+      echo "exec ${pre}\"\$PREFIX/lib/arena-bin/opencode\" \"\$@\""
     } > "$1"
     chmod +x "$1"
   }
@@ -545,8 +558,8 @@ if [ "$IS_TERMUX" = true ]; then
       printf 'stdout     : %s\n' "$(head -c 300 "$VOUT" | tr '\n' ' ')"
       printf 'stderr     :\n'; head -20 "$VERR" | sed 's/^/  /'
       printf 'launcher   :\n'; head -20 "$PREFIX/bin/arena" | sed 's/^/  /'
-      printf 'bare loader test (no proot):\n'
-      $TMO_RUN "$PREFIX/lib/arena-musl/ld-musl-aarch64.so.1" --library-path "$PREFIX/lib/arena-musl" "$PREFIX/lib/arena-bin/opencode" --version 2>&1 | head -5 | sed 's/^/  /'
+      printf 'direct exec test (no proot):\n'
+      env -u LD_PRELOAD LD_LIBRARY_PATH="$PREFIX/lib/arena-musl" $TMO_RUN "$PREFIX/lib/arena-bin/opencode" --version 2>&1 | head -8 | sed 's/^/  /'
       printf 'trace (last 15):\n'
       $TMO_RUN sh -x "$PREFIX/bin/arena" --version 2>&1 | tail -15 | sed 's/^/  /'
       printf 'report end.\n'
