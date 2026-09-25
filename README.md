@@ -44,30 +44,40 @@ Same one-liner, run inside Termux. The script detects Termux and takes a differe
 
 1. Grabs just the three musl runtime libs (`ld-musl`, `libstdc++`, `libgcc`, ~4 MB total)
    straight from Alpine's CDN
-2. Drops the `linux-arm64-musl` binary in `$PREFIX/lib/arena-bin/` and writes
-   `$PREFIX/bin/opencode` + `$PREFIX/bin/arena` launchers
+2. Drops the `linux-arm64-musl` binary in `$PREFIX/lib/arena-bin/` and writes an `arena`
+   launcher — and takes the `opencode` name **only if it's free**. An `opencode` you already
+   have (a native Termux build, for instance) is left exactly as it is.
 3. Only if the device hides `/etc/resolv.conf` (the usual case on Android), installs `proot`
-   (~1 MB, asks first) so DNS can be bound — nothing else uses it
+   (~1 MB, asks first) plus `resolv-conf` so DNS can be bound — nothing else uses it
 
 Android's bionic libc can't run the binary directly, so the launcher invokes the musl loader
 explicitly: `ld-musl-aarch64.so.1 --library-path … opencode`. Total overhead beyond the
-binary is **~4 MB** bare, or ~5 MB with the proot DNS lane. Config lives at the normal
-`~/.config/opencode`, same as desktop.
+binary is **~4 MB** bare, or ~5 MB with the proot DNS lane — compare ~300 MB for a
+proot-distro rootfs. Config lives at the normal `~/.config/opencode`, same as desktop.
 
 Force either lane: `ARENA_PROOT=1` (always proot) or `ARENA_PROOT=0` (never).
 
-Uninstall removes the launchers, the binary, and the musl libs.
+Want arena to claim the `opencode` command anyway? `ARENA_TAKE_OPENCODE=1`.
+
+Uninstall removes the `arena` launcher, the binary, and the musl libs — and only removes
+`opencode` if that launcher is ours; your own binary is never touched.
 
 ### Something broke?
 
-Run the doctor and paste the report — it prints the environment, DNS setup, installed files,
-launcher contents, an exec trace with stderr, and a connectivity check:
+Run the doctor and paste the report file — it captures the environment, DNS setup, installed
+files, launcher contents (binaries are fingerprinted, never dumped), an exec test with rc +
+stderr, and a connectivity check:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | bash -s -- --doctor
+cat ~/arena-doctor.txt
 ```
 
-`bash -s -- --help` lists all flags and env knobs (`ARENA_VERSION`, `ARENA_PROOT`).
+It writes `~/arena-doctor.txt` and keeps the terminal to five lines, so it's safe on a phone
+screen.
+
+`bash -s -- --help` lists all flags and env knobs (`ARENA_VERSION`, `ARENA_PROOT`,
+`ARENA_TAKE_OPENCODE`).
 
 ### Why not npm?
 

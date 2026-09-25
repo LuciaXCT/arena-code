@@ -102,6 +102,11 @@ sha_file() {
   fi
 }
 
+# any byte outside tab/lf/cr/printable in the first 512 → don't cat it
+is_binary() {
+  [ "$(LC_ALL=C head -c 512 "$1" 2>/dev/null | tr -d '\11\12\15\40-\176' | wc -c | tr -d ' ')" != "0" ]
+}
+
 # ─── help ───────────────────────────────────────────────────
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   cat <<'HELP'
@@ -120,6 +125,7 @@ env knobs:
   ARENA_VERSION=1.0.0-arena.1   pin a specific release
   ARENA_PROOT=1                 termux: force the 1 MB proot DNS lane
   ARENA_PROOT=0                 termux: never use proot (no DNS without it)
+  ARENA_TAKE_OPENCODE=1         termux: replace an existing `opencode` command
   ARENA_TERMUX=1                pretend to be termux (testing)
 HELP
   exit 0
@@ -131,7 +137,7 @@ if [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--debug" ]; then
   trap 'rm -rf "$DOCTMP"' EXIT
   REPORT="${ARENA_DOCTOR_FILE:-$HOME/arena-doctor.txt}"
   LAUNCHER="$BIN_DIR/$BIN_NAME"
-  [ "$IS_TERMUX" = true ] && LAUNCHER="$PREFIX/bin/opencode"
+  [ "$IS_TERMUX" = true ] && LAUNCHER="$PREFIX/bin/arena"
   # the whole report goes to a file — the phone screen stays clean
   {
   printf '── ARENA CODE DOCTOR ─────────────────────\n'
@@ -163,8 +169,17 @@ if [ "${1:-}" = "--doctor" ] || [ "${1:-}" = "--debug" ]; then
     done
     LEGACY="$PREFIX/var/lib/proot-distro/installed-rootfs/alpine"
     [ -d "$LEGACY" ] && warn "legacy alpine rootfs present ($(du -sh "$LEGACY" 2>/dev/null | cut -f1)) — reclaim: proot-distro remove alpine"
-    printf '\n%s— launcher —%s\n' "$DM" "$X"
-    if [ -f "$PREFIX/bin/opencode" ]; then sed 's/^/  /' "$PREFIX/bin/opencode"; else printf '  MISSING\n'; fi
+    printf '\n%s— launchers —%s\n' "$DM" "$X"
+    for L in "$PREFIX/bin/arena" "$PREFIX/bin/opencode"; do
+      if [ ! -e "$L" ]; then printf '  MISS %s\n' "$L"; continue; fi
+      if is_binary "$L"; then
+        printf '  BIN  %s (%s B, sha256 %s)\n' "$L" "$(wc -c < "$L" | tr -d ' ')" "$(sha_file "$L" | cut -c1-16)"
+        printf '       NOT ours — a foreign binary sits there (native build?)\n'
+      else
+        printf '  text %s\n' "$L"
+        head -40 "$L" | sed 's/^/       /'
+      fi
+    done
   fi
   printf '\n%s— exec test —%s\n' "$DM" "$X"
   if [ "$IS_TERMUX" = true ]; then
@@ -209,9 +224,13 @@ fi
 if [ "${1:-}" = "--uninstall" ]; then
   step "0/5" "Uninstall"
   if [ "$IS_TERMUX" = true ]; then
-    for F in "$PREFIX/bin/opencode" "$PREFIX/bin/arena"; do
-      [ -f "$F" ] && rm -f "$F" && ok "removed $F"
-    done
+    [ -f "$PREFIX/bin/arena" ] && rm -f "$PREFIX/bin/arena" && ok "removed $PREFIX/bin/arena"
+    OC="$PREFIX/bin/opencode"
+    if [ -e "$OC" ] && grep -q "arena-musl" "$OC" 2>/dev/null; then
+      rm -f "$OC" && ok "removed $OC"
+    elif [ -e "$OC" ]; then
+      warn "left $OC alone — that one isn't ours"
+    fi
     [ -d "$PREFIX/lib/arena-bin" ] && rm -rf "$PREFIX/lib/arena-bin" && ok "removed $PREFIX/lib/arena-bin"
     [ -d "$PREFIX/lib/arena-musl" ] && rm -rf "$PREFIX/lib/arena-musl" && ok "removed $PREFIX/lib/arena-musl"
     LEGACY="$PREFIX/var/lib/proot-distro/installed-rootfs/alpine"
@@ -345,7 +364,7 @@ if [ "$IS_TERMUX" = true ]; then
   else
     printf '  runtime   : musl libs only (~4 MB) — NO proot, NO distro\n'
   fi
-  printf '  launchers : $PREFIX/bin/opencode + $PREFIX/bin/arena\n'
+  printf '  launchers : $PREFIX/bin/arena  (opencode too, if the name was free)\n'
 else
   printf '  binary    : %s/%s\n' "$BIN_DIR" "$BIN_NAME"
 fi
@@ -474,12 +493,23 @@ if [ "$IS_TERMUX" = true ]; then
     chmod +x "$1"
   }
 
-  for L in opencode arena; do
-    write_launcher "$PREFIX/bin/$L"
-  done
-  ok "launchers → \$PREFIX/bin/opencode + \$PREFIX/bin/arena"
+  # 'arena' always. 'opencode' only when it's free or already ours — never
+  # stomp a working opencode the phone already has (native termux builds exist)
+  write_launcher "$PREFIX/bin/arena"
+  ok "launcher → \$PREFIX/bin/arena"
 
-  V=$($TMO "$PREFIX/bin/opencode" --version 2>/dev/null | head -1)
+  OC="$PREFIX/bin/opencode"
+  if [ ! -e "$OC" ] || grep -q "arena-musl" "$OC" 2>/dev/null || [ "${ARENA_TAKE_OPENCODE:-}" = "1" ]; then
+    write_launcher "$OC"
+    ok "launcher → \$PREFIX/bin/opencode"
+  else
+    OCV=$($TMO "$OC" --version 2>/dev/null | head -1)
+    OC_KEPT=1
+    warn "kept your existing opencode${OCV:+ ($OCV)} — arena lives at 'arena'"
+    warn "to take the name over: ARENA_TAKE_OPENCODE=1 rerun the installer"
+  fi
+
+  V=$($TMO "$PREFIX/bin/arena" --version 2>/dev/null | head -1)
   if [ -n "$V" ]; then
     ok "verified: $V"
   else
@@ -549,7 +579,11 @@ fi  # end termux/native branch
 printf '\n%s  ██████████████████████████████████%s\n' "$G" "$X"
 printf '%s   ARENA CODE INSTALLED%s\n' "$B" "$X"
 if [ "$IS_TERMUX" = true ]; then
-  printf '%s   run:  opencode   (launches the musl runtime directly)%s\n' "$G" "$X"
+  if [ "${OC_KEPT:-}" = "1" ]; then
+    printf '%s   run:  arena   (your old `opencode` was left alone)%s\n' "$G" "$X"
+  else
+    printf '%s   run:  opencode   (launches the musl runtime directly)%s\n' "$G" "$X"
+  fi
   printf '%s   config: ~/.config/opencode — same as desktop%s\n' "$DM" "$X"
   if [ "$NEED_PROOT" = true ]; then
     printf '%s   overhead: ~5 MB (musl libs + 1 MB proot) — no distro, no rootfs%s\n' "$DM" "$X"
