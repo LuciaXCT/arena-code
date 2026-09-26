@@ -3,11 +3,14 @@ import { EOL } from "os"
 import { NamedError } from "@opencode-ai/util/error"
 
 export namespace UI {
+  // "ARENA CODE" as the same fixed-width half-block wordmark the TUI banner
+  // uses, split at the space between the two words: the CLI tints "ARENA"
+  // (row[0]) and leaves "CODE" (row[1]) at full brightness. Every row is
+  // exactly the same width, so the two halves stay locked to each other.
   const LOGO = [
-    [`                   `, `     ▄       `],
-    [`█▀▀█ █▀▀█ █▀▀█ █▀█ █▀▀█ `, `█▀▀█ █`],
-    [`█▄▄█ █░░█ █░░█ █▀▄ █░░█ `, `█░░█ █`],
-    [`▀  ▀ ▀▀▀▀ ▀▀▀▀ ▀ ▀ ▀▀▀▀ `, `▀▀▀▀ ▀`],
+    [`▄▀▀▄ █▀▀▄ █▀▀▀ █  █ ▄▀▀▄     `, `▄▀▀▀ ▄▀▀▄ █▀▀▄ █▀▀▀`],
+    [`█▄▄█ █▄▄▀ █▀▀  ██ █ █▄▄█     `, `█    █  █ █  █ █▀▀ `],
+    [`█  █ █  █ █▄▄▄ █ ██ █  █     `, `▀▄▄▄ ▀▄▄▀ █▄▄▀ █▄▄▄`],
   ]
 
   export const CancelledError = NamedError.create("UICancelledError", z.void())
