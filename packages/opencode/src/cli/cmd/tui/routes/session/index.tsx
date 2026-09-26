@@ -57,7 +57,7 @@ import { DialogConfirm } from "@tui/ui/dialog-confirm"
 import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
-import { Sidebar } from "./sidebar"
+import { StatusPanel } from "../../component/status-panel"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import parsers from "../../../../../../parsers-config.ts"
 import { Clipboard } from "../../util/clipboard"
@@ -132,8 +132,8 @@ export function Session() {
   })
 
   const dimensions = useTerminalDimensions()
-  const [sidebar, setSidebar] = createSignal<"show" | "hide" | "auto">(kv.get("sidebar", "auto"))
   const [conceal, setConceal] = createSignal(true)
+  const [statusOpen, setStatusOpen] = createSignal(false)
   const [showThinking, setShowThinking] = createSignal(kv.get("thinking_visibility", false))
   const [showTimestamps, setShowTimestamps] = createSignal(kv.get("timestamps", "hide") === "show")
   const [usernameVisible, setUsernameVisible] = createSignal(kv.get("username_visible", true))
@@ -143,14 +143,9 @@ export function Session() {
   const [diffWrapMode, setDiffWrapMode] = createSignal<"word" | "none">("word")
   const [animationsEnabled, setAnimationsEnabled] = createSignal(kv.get("animations_enabled", true))
 
-  const wide = createMemo(() => dimensions().width > 120)
-  const sidebarVisible = createMemo(() => {
-    if (session()?.parentID) return false
-    if (sidebar() === "show") return true
-    if (sidebar() === "auto" && wide()) return true
-    return false
-  })
-  const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
+  // Full-width chat: no side rail and no width math. The column is the whole
+  // terminal minus the gutters this screen paints with.
+  const contentWidth = createMemo(() => dimensions().width - 4)
 
   const scrollAcceleration = createMemo(() => {
     const tui = sync.data.config.tui
@@ -200,6 +195,16 @@ export function Session() {
     if (!session()?.parentID) return
     if (keybind.match("app_exit", evt)) {
       exit()
+    }
+  })
+
+  // Esc closes the status overlay first, before it can reach the prompt and be
+  // read as "interrupt the session".
+  useKeyboard((evt) => {
+    if (!statusOpen()) return
+    if (evt.name === "escape") {
+      setStatusOpen(false)
+      evt.preventDefault()
     }
   })
 
@@ -445,18 +450,12 @@ export function Session() {
       },
     },
     {
-      title: sidebarVisible() ? "Hide sidebar" : "Show sidebar",
-      value: "session.sidebar.toggle",
+      title: statusOpen() ? "Hide status panel" : "Show status panel",
+      value: "session.status.toggle",
       keybind: "sidebar_toggle",
       category: "Session",
       onSelect: (dialog) => {
-        setSidebar((prev) => {
-          if (prev === "auto") return sidebarVisible() ? "hide" : "show"
-          if (prev === "show") return "hide"
-          return "show"
-        })
-        if (sidebar() === "show") kv.set("sidebar", "auto")
-        if (sidebar() === "hide") kv.set("sidebar", "hide")
+        setStatusOpen((prev) => !prev)
         dialog.clear()
       },
     },
@@ -914,16 +913,10 @@ export function Session() {
         sync,
       }}
     >
-      <box flexDirection="row">
-        <Show when={sidebarVisible() && wide()}>
-          <Sidebar sessionID={route.sessionID} />
-        </Show>
-        <box flexGrow={1} minHeight={0} alignItems="center">
-        <box width="100%" flexGrow={1} paddingBottom={1} paddingTop={1} paddingLeft={3} paddingRight={3} gap={1}>
+      <box flexDirection="column" width="100%" height="100%" backgroundColor={theme.background}>
+        <box width="100%" flexGrow={1} minHeight={0} flexDirection="column" paddingBottom={1} paddingTop={1} paddingLeft={3} paddingRight={3} gap={1}>
           <Show when={session()}>
-            <Show when={!sidebarVisible()}>
-              <Header />
-            </Show>
+            <Header />
             <scrollbox
               ref={(r) => (scroll = r)}
               viewportOptions={{
@@ -1037,6 +1030,12 @@ export function Session() {
                   </Switch>
                 )}
               </For>
+              <Show when={messages().length === 0}>
+                <box paddingLeft={2} paddingTop={1} flexDirection="column" gap={1} flexShrink={0}>
+                  <text fg={theme.textMuted}>Ask anything, or press ctrl+p for commands.</text>
+                  <text fg={theme.textMuted}>ctrl+x b opens status — context · mcp · lsp · todo</text>
+                </box>
+              </Show>
             </scrollbox>
             <box flexShrink={0}>
               <Show when={permissions().length > 0}>
@@ -1055,25 +1054,12 @@ export function Session() {
                 sessionID={route.sessionID}
               />
             </box>
-            <Show when={!sidebarVisible()}>
-              <Taskbar />
-            </Show>
+            <Taskbar />
           </Show>
           <Toast />
         </box>
-        </box>
-        <Show when={sidebarVisible() && !wide()}>
-          <box
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            bottom={0}
-            alignItems="flex-end"
-            backgroundColor={RGBA.fromInts(0, 0, 0, 70)}
-          >
-            <Sidebar sessionID={route.sessionID} />
-          </box>
+        <Show when={statusOpen() && session()}>
+          <StatusPanel sessionID={route.sessionID} onClose={() => setStatusOpen(false)} />
         </Show>
       </box>
     </context.Provider>
@@ -1122,12 +1108,7 @@ function UserMessage(props: {
   return (
     <>
       <Show when={text()}>
-        <box
-          id={props.message.id}
-          marginTop={props.index === 0 ? 0 : 1}
-          marginRight="auto"
-          width="78%"
-        >
+        <box id={props.message.id} marginTop={props.index === 0 ? 0 : 1} width="100%" flexShrink={0}>
           <box
             onMouseOver={() => {
               setHover(true)
@@ -1143,20 +1124,20 @@ function UserMessage(props: {
             backgroundColor={hover() ? theme.backgroundElement : undefined}
             flexShrink={0}
           >
+            <text fg={theme.textMuted} attributes={TextAttributes.DIM}>
+              You
+            </text>
             <text fg={hover() ? theme.secondary : theme.text} attributes={TextAttributes.BOLD}>
               {text()}
             </text>
             <Show when={files().length}>
-              <box flexDirection="row" paddingBottom={1} paddingTop={1} gap={1} flexWrap="wrap">
+              <box flexDirection="row" paddingTop={1} gap={2} flexWrap="wrap">
                 <For each={files()}>
                   {(file) => {
                     const directory = file.mime === "application/x-directory"
                     return (
-                      <text fg={theme.text}>
-                        <span style={{ bg: theme.primary, fg: theme.background }}>
-                          {directory ? " Directory " : " File "}
-                        </span>
-                        <span style={{ bg: theme.backgroundPanel, fg: theme.text }}> {file.filename} </span>
+                      <text fg={theme.textMuted}>
+                        {directory ? "dir" : "file"} <span style={{ fg: theme.text }}>{file.filename}</span>
                       </text>
                     )
                   }}
@@ -1245,7 +1226,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
       </Show>
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box paddingLeft={3}>
+          <box paddingLeft={2}>
             <text marginTop={1}>
               <span
                 style={{
@@ -1346,10 +1327,10 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
   const blocks = createMemo(() => splitFences(props.part.text.trim()))
   return (
     <Show when={props.part.text.trim()}>
-      <box id={"text-" + props.part.id} paddingLeft={1} marginTop={1} flexShrink={0}>
+      <box id={"text-" + props.part.id} paddingLeft={2} marginTop={1} flexShrink={0}>
         <Show when={props.last || !props.part.time?.end}>
           <text fg={theme.primary} attributes={TextAttributes.BOLD}>
-            ARENA
+            Arena
           </text>
         </Show>
         <Index each={blocks()}>

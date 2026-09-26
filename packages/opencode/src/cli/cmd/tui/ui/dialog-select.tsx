@@ -1,5 +1,5 @@
 import { InputRenderable, RGBA, ScrollBoxRenderable, TextAttributes } from "@opentui/core"
-import { useTheme, selectedForeground } from "@tui/context/theme"
+import { useTheme } from "@tui/context/theme"
 import { entries, filter, flatMap, groupBy, pipe, take } from "remeda"
 import { batch, createEffect, createMemo, For, Show, type JSX, on } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -237,7 +237,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
               <>
                 <Show when={category}>
                   <box paddingTop={index() > 0 ? 1 : 0} paddingLeft={3}>
-                    <text fg={theme.accent} attributes={TextAttributes.BOLD}>
+                    <text fg={theme.textMuted} attributes={TextAttributes.BOLD}>
                       {category}
                     </text>
                   </box>
@@ -259,7 +259,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                           if (index === -1) return
                           moveTo(index)
                         }}
-                        backgroundColor={active() ? (option.bg ?? theme.primary) : RGBA.fromInts(0, 0, 0, 0)}
+                        backgroundColor={active() ? (option.bg ?? theme.backgroundElement) : RGBA.fromInts(0, 0, 0, 0)}
                         paddingLeft={current() || option.gutter ? 1 : 3}
                         paddingRight={3}
                         gap={1}
@@ -309,7 +309,9 @@ function Option(props: {
   onMouseOver?: () => void
 }) {
   const { theme } = useTheme()
-  const fg = selectedForeground(theme)
+  // Selected rows read as a lifted surface with accent text, not a solid
+  // primary block - the block was the single cheapest-looking element here.
+  const fg = theme.primary
 
   return (
     <>

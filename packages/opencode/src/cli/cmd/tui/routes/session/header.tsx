@@ -38,16 +38,22 @@ export function Header() {
   const age = createMemo(() => timeAgo(session()?.time?.updated || Date.now()))
 
   return (
-    <box flexDirection="row" justifyContent="space-between" alignItems="center" paddingLeft={2} paddingRight={2} paddingTop={1} paddingBottom={1} backgroundColor={theme.backgroundElement} border={["bottom"]} borderColor={theme.borderSubtle} flexShrink={0}>
-      <box flexDirection="row" gap={1} alignItems="center">
-        <text fg={theme.error}>●</text>
-        <text fg={theme.warning}>●</text>
-        <text fg={theme.success}>●</text>
-        <text fg={theme.textMuted}>○</text>
-      </box>
-      <box flexDirection="row" gap={1} alignItems="center">
-        <text fg={theme.text} attributes={1}>{title()}</text>
-        <text fg={theme.textMuted}>·</text>
+    <box
+      flexDirection="row"
+      justifyContent="space-between"
+      alignItems="center"
+      paddingLeft={2}
+      paddingRight={2}
+      paddingTop={1}
+      paddingBottom={1}
+      border={["bottom"]}
+      borderColor={theme.borderSubtle}
+      flexShrink={0}
+    >
+      <box flexDirection="row" gap={2} alignItems="center">
+        <text fg={theme.text} attributes={1}>
+          {title()}
+        </text>
         <text fg={theme.textMuted}>{age()}</text>
       </box>
       <box flexDirection="row" gap={2} alignItems="center">

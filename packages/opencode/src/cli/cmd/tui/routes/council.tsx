@@ -102,7 +102,7 @@ export function Council() {
   })
 
   return (
-    <box flexDirection="column" flexGrow={1} paddingLeft={2} paddingRight={2} paddingTop={1} gap={1}>
+    <box flexDirection="column" flexGrow={1} paddingLeft={3} paddingRight={3} paddingTop={1} gap={1}>
       <box flexDirection="row" gap={1} flexShrink={0}>
         <text fg={theme.primary} attributes={TextAttributes.BOLD}>
           COUNCIL
@@ -130,7 +130,15 @@ export function Council() {
         </For>
       </box>
 
-      <box flexDirection="column" flexShrink={0} minHeight={0} maxHeight={10}>
+      <box
+        flexDirection="column"
+        flexShrink={0}
+        minHeight={0}
+        maxHeight={10}
+        paddingTop={1}
+        border={["top"]}
+        borderColor={theme.borderSubtle}
+      >
         <text fg={theme.primary} attributes={TextAttributes.BOLD} flexShrink={0}>
           VERDICT
         </text>

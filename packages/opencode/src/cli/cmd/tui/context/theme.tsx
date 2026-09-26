@@ -106,6 +106,17 @@ type Theme = ThemeColors & {
   thinkingOpacity: number
 }
 
+// Re-alpha an existing theme colour. RGBA channels are 0-1 floats, so this
+// keeps the exact hue while letting a surface go translucent (frosted glass).
+export function withAlpha(color: RGBA, alpha: number): RGBA {
+  return RGBA.fromInts(
+    Math.round(color.r * 255),
+    Math.round(color.g * 255),
+    Math.round(color.b * 255),
+    Math.round(Math.max(0, Math.min(255, alpha))),
+  )
+}
+
 export function selectedForeground(theme: Theme): RGBA {
   // If theme explicitly defines selectedListItemText, use it
   if (theme._hasSelectedListItemText) {
