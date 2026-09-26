@@ -290,12 +290,9 @@ export function Sidebar(props: { sessionID: string }) {
                     ✕
                   </text>
                 </box>
-                <text fg={theme.textMuted}>Arena Code includes free models so you can start immediately.</text>
-                <text fg={theme.textMuted}>
-                  Connect from 75+ providers to use other models, including Claude, GPT, Gemini etc
-                </text>
+                <text fg={theme.textMuted}>Free models are ready — no key needed.</text>
                 <box flexDirection="row" gap={1} justifyContent="space-between">
-                  <text fg={theme.text}>Connect provider</text>
+                  <text fg={theme.text}>Connect a provider</text>
                   <text fg={theme.textMuted}>/connect</text>
                 </box>
               </box>

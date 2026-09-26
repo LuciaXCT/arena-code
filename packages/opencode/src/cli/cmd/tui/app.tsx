@@ -21,6 +21,7 @@ import { DialogHelp } from "./ui/dialog-help"
 import { CommandProvider, useCommandDialog } from "@tui/component/dialog-command"
 import { DialogAgent } from "@tui/component/dialog-agent"
 import { DialogSessionList } from "@tui/component/dialog-session-list"
+import { DialogSetup } from "@tui/component/dialog-setup"
 import { KeybindProvider } from "@tui/context/keybind"
 import { ThemeProvider, useTheme } from "@tui/context/theme"
 import { Home } from "@tui/routes/home"
@@ -264,19 +265,30 @@ function App() {
     }
   })
 
+  // First run: show the setup wizard once, as soon as sync is done. After that
+  // it never nags again - /connect and the command palette stay available.
   createEffect(
     on(
-      () => sync.status === "complete" && sync.data.provider.length === 0,
-      (isEmpty, wasEmpty) => {
-        // only trigger when we transition into an empty-provider state
-        if (!isEmpty || wasEmpty) return
-        dialog.replace(() => <DialogProviderList />)
+      () => sync.status === "complete",
+      (complete) => {
+        if (!complete) return
+        if (kv.get("setup_done", false)) return
+        if (dialog.stack.length > 0) return
+        dialog.replace(() => <DialogSetup />)
       },
     ),
   )
 
   const connected = useConnected()
   command.register(() => [
+    {
+      title: "Setup guide",
+      value: "setup.open",
+      category: "Session",
+      onSelect: () => {
+        dialog.replace(() => <DialogSetup />)
+      },
+    },
     {
       title: "Switch session",
       value: "session.list",

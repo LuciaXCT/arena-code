@@ -62,7 +62,7 @@ export function Logo() {
         What can I build for you?
       </text>
       <text fg={theme.textMuted} selectable={false}>
-        Interact with Arena Code and explore the boundless creative world
+        Free models are ready — type a prompt to start
       </text>
     </box>
   )
