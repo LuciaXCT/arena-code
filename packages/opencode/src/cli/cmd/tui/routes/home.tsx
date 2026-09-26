@@ -1,7 +1,7 @@
 import { Prompt, type PromptRef } from "@tui/component/prompt"
 import { createEffect, createMemo, createSignal, For, onMount, Show } from "solid-js"
-import { TextAttributes } from "@opentui/core"
-import { useTerminalDimensions } from "@opentui/solid"
+import { TextAttributes, type ScrollBoxRenderable } from "@opentui/core"
+import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
 import { useTheme } from "@tui/context/theme"
 import { Logo, OldBanner } from "../component/logo"
 import { useSync } from "../context/sync"
@@ -12,6 +12,7 @@ import { useDirectory } from "../context/directory"
 import { useRoute, useRouteData } from "@tui/context/route"
 import { usePromptRef } from "../context/prompt"
 import { useCommandDialog } from "../component/dialog-command"
+import { useDialog } from "../ui/dialog"
 
 // TODO: what is the best way to do this?
 let once = false
@@ -62,6 +63,7 @@ export function Home() {
   const args = useArgs()
   const router = useRoute()
   const command = useCommandDialog()
+  const dialog = useDialog()
   const dimensions = useTerminalDimensions()
   const directory = useDirectory()
 
@@ -70,16 +72,51 @@ export function Home() {
   // More air on tall panes, tightened up when rows are scarce.
   const spacing = createMemo(() => (dimensions().height >= 34 ? 2 : 1))
 
+  // Every root session, newest first. The rail is a scrollbox now, so the whole
+  // history is reachable instead of just the eight that fit above the fold.
   const recentSessions = createMemo(() =>
     (sync.data.session || [])
       .filter((x) => x.parentID === undefined)
-      .toSorted((a, b) => b.time.updated - a.time.updated)
-      .slice(0, 8),
+      .toSorted((a, b) => b.time.updated - a.time.updated),
   )
 
-  // The sidebar has no scrollbox, so cap the list to what actually fits.
-  // 1 row per session, ~19 rows of fixed chrome around it.
-  const sidebarItems = createMemo(() => Math.max(1, Math.min(12, dimensions().height - 20)))
+  // ~19 rows of fixed chrome sit above/below the rail's list, so this is a
+  // close-enough estimate of visible rows - used only to decide whether to
+  // show the "more below" hint. The scrollbox itself measures for real.
+  const railRows = createMemo(() => Math.max(1, dimensions().height - 19))
+  const cardRows = createMemo(() => Math.max(1, Math.min(6, dimensions().height - 30)))
+
+  let railScroll: ScrollBoxRenderable | undefined
+  let cardScroll: ScrollBoxRenderable | undefined
+
+  // PageUp/PageDown and Ctrl+Up/Down scroll whichever session list is showing.
+  // Plain arrows stay with the composer (prompt history) and Ctrl+P/Ctrl+X
+  // belong to the command/session dialogs, so these keys are free on home.
+  useKeyboard((evt) => {
+    if (dialog.stack.length > 0) return
+    const target = wide() ? railScroll : cardScroll
+    if (!target) return
+    const page = Math.max(1, target.height - 1)
+    switch (evt.name) {
+      case "pageup":
+        target.scrollBy(-page)
+        break
+      case "pagedown":
+        target.scrollBy(page)
+        break
+      case "up":
+        if (!evt.ctrl) return
+        target.scrollBy(-1)
+        break
+      case "down":
+        if (!evt.ctrl) return
+        target.scrollBy(1)
+        break
+      default:
+        return
+    }
+    evt.preventDefault()
+  })
 
   // The centered column drops its heaviest blocks on short panes instead of
   // growing taller than the viewport and clipping the greeting at the top.
@@ -87,7 +124,6 @@ export function Home() {
   // The sidebar already lists sessions - only duplicate the list in the center
   // on panes too narrow to show the rail.
   const showRecentCard = createMemo(() => !wide() && dimensions().height >= 30)
-  const cardItems = createMemo(() => Math.max(1, Math.min(4, dimensions().height - 30)))
 
   // "New session - 2026-09-24T16:29Z" is noise. Prefer what they typed.
   const friendlyTitle = (s: { id: string; title?: string }, max: number) =>
@@ -101,8 +137,8 @@ export function Home() {
   // actually shows so the list reads like something a person wrote.
   const hydrated = new Set<string>()
   createEffect(() => {
-    if (!wide()) return
-    for (const s of recentSessions().slice(0, Math.min(sidebarItems(), 8))) {
+    // Hydrate a bounded window - opening every session would hammer the server.
+    for (const s of recentSessions().slice(0, 40)) {
       if (hydrated.has(s.id)) continue
       hydrated.add(s.id)
       void sync.session.sync(s.id).catch(() => {})
@@ -196,6 +232,7 @@ export function Home() {
             {/* Scrollable so the whole history is reachable, not just the
                 few that happen to fit above the fold. */}
             <scrollbox
+              ref={(r: ScrollBoxRenderable) => (railScroll = r)}
               flexDirection="column"
               flexGrow={1}
               minHeight={0}
@@ -228,6 +265,14 @@ export function Home() {
                 }}
               </For>
             </scrollbox>
+
+            <Show when={recentSessions().length > railRows()}>
+              <box height={1} flexShrink={0}>
+                <text fg={theme.textMuted} selectable={false}>
+                  {recentSessions().length - railRows()} more ↓ pgup/pgdn
+                </text>
+              </box>
+            </Show>
 
             <box height={1} flexShrink={0}>
               <text fg={theme.textMuted} selectable={false}>
@@ -304,7 +349,15 @@ export function Home() {
                 </text>
               </box>
               <box height={1} flexShrink={0} />
-              <For each={recentSessions().slice(0, cardItems())}>
+              <scrollbox
+                ref={(r: ScrollBoxRenderable) => (cardScroll = r)}
+                flexDirection="column"
+                maxHeight={cardRows()}
+                minHeight={0}
+                verticalScrollbarOptions={{ visible: false }}
+                horizontalScrollbarOptions={{ visible: false }}
+              >
+                <For each={recentSessions()}>
                 {(s) => {
                   const [hover, setHover] = createSignal(false)
                   const title = friendlyTitle(s, 34)
@@ -328,7 +381,8 @@ export function Home() {
                     </box>
                   )
                 }}
-              </For>
+                </For>
+              </scrollbox>
             </box>
           </Show>
 
