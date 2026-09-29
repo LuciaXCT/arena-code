@@ -23,9 +23,12 @@ export function StatusStrip(props: { sessionID: string }) {
 
   return (
     <Show when={openTodos().length > 0 || mcpDown() > 0}>
-      <box flexShrink={0} paddingLeft={2} paddingRight={2} flexDirection="column" gap={0}>
+      {/* Marker sits in the same gutter column as the user-message rail (┃),
+          content lines up with message text — the strip reads as a note
+          hanging on the left rail, not a floating paragraph. */}
+      <box flexShrink={0} flexDirection="column" gap={0}>
         <Show when={current()}>
-          <box flexDirection="row" gap={1}>
+          <box flexDirection="row" gap={2}>
             <text flexShrink={0} selectable={false} style={{ fg: theme.warning }}>
               ◇
             </text>
@@ -34,14 +37,13 @@ export function StatusStrip(props: { sessionID: string }) {
             </text>
             <Show when={openTodos().length > 1}>
               <text flexShrink={0} fg={theme.textMuted} selectable={false}>
-                {" "}
                 · {openTodos().length - 1} more
               </text>
             </Show>
           </box>
         </Show>
         <Show when={mcpDown() > 0}>
-          <box flexDirection="row" gap={1}>
+          <box flexDirection="row" gap={2}>
             <text flexShrink={0} selectable={false} style={{ fg: theme.error }}>
               ◆
             </text>
