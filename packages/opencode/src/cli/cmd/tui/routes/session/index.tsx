@@ -58,6 +58,7 @@ import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
 import { StatusPanel } from "../../component/status-panel"
+import { StatusStrip } from "../../component/status-strip"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import parsers from "../../../../../../parsers-config.ts"
 import { Clipboard } from "../../util/clipboard"
@@ -1043,6 +1044,9 @@ export function Session() {
                 )}
               </For>
             </scrollbox>
+            <Show when={session()}>
+              <StatusStrip sessionID={route.sessionID} />
+            </Show>
             <box flexShrink={0}>
               <Show when={permissions().length > 0}>
                 <PermissionPrompt request={permissions()[0]} />
