@@ -51,6 +51,11 @@ export function Header() {
       flexShrink={0}
     >
       <box flexDirection="row" gap={2} alignItems="center">
+        <text>
+          <span style={{ fg: theme.primary, bold: true }}>◆</span>
+          <span style={{ fg: theme.textMuted }}> arena</span>
+        </text>
+        <text fg={theme.border}>│</text>
         <text fg={theme.text} attributes={1}>
           {title()}
         </text>

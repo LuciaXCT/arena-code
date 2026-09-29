@@ -775,7 +775,7 @@ export function Prompt(props: PromptProps) {
             {/* Starts at one line and grows with the message, up to eight, then
                 scrolls. The chip fill nudges a re-measure so it grows too. */}
             <textarea
-              placeholder={"How can I help you today?"}
+              placeholder={"What can I build for you?"}
               textColor={keybind.leader ? theme.textMuted : theme.text}
               focusedTextColor={keybind.leader ? theme.textMuted : theme.text}
               minHeight={1}

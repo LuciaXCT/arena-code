@@ -917,6 +917,18 @@ export function Session() {
         <box width="100%" flexGrow={1} minHeight={0} flexDirection="column" paddingBottom={1} paddingTop={1} paddingLeft={3} paddingRight={3} gap={1}>
           <Show when={session()}>
             <Header />
+            {/* Empty-state hint lives beside the scrollbox, not inside it: a
+                Show that unmounts a scroll child leaves the rows behind, so the
+                greeting would linger over the first reply of every session. */}
+            <Show when={messages().length === 0}>
+              <box flexShrink={0} paddingLeft={2} paddingTop={1}>
+                <text>
+                  <span style={{ fg: theme.primary, bold: true }}>◆</span>
+                  <span style={{ fg: theme.text, bold: true }}> arena</span>
+                  <span style={{ fg: theme.textMuted }}> — ask anything, or press ctrl+p for commands</span>
+                </text>
+              </box>
+            </Show>
             <scrollbox
               ref={(r) => (scroll = r)}
               viewportOptions={{
@@ -1030,12 +1042,6 @@ export function Session() {
                   </Switch>
                 )}
               </For>
-              <Show when={messages().length === 0}>
-                <box paddingLeft={2} paddingTop={1} flexDirection="column" gap={1} flexShrink={0}>
-                  <text fg={theme.textMuted}>Ask anything, or press ctrl+p for commands.</text>
-                  <text fg={theme.textMuted}>ctrl+x b opens status — context · mcp · lsp · todo</text>
-                </box>
-              </Show>
             </scrollbox>
             <box flexShrink={0}>
               <Show when={permissions().length > 0}>
@@ -1117,19 +1123,30 @@ function UserMessage(props: {
               setHover(false)
             }}
             onMouseUp={props.onMouseUp}
+            border={["left"]}
+            customBorderChars={SplitBorder.customBorderChars}
+            borderColor={color()}
             paddingTop={1}
             paddingBottom={1}
             paddingLeft={2}
             paddingRight={2}
-            backgroundColor={hover() ? theme.backgroundElement : undefined}
+            backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
             flexShrink={0}
           >
-            <text fg={theme.textMuted} attributes={TextAttributes.DIM}>
-              You
+            <text>
+              <span style={{ fg: color(), bold: true }}>❯</span>
+              <span style={{ fg: theme.text, bold: true }}> you</span>
+              <Show when={ctx.showTimestamps()}>
+                <span style={{ fg: theme.textMuted }}>
+                  {" · "}
+                  {Locale.todayTimeOrDateTime(props.message.time.created)}
+                </span>
+              </Show>
+              <Show when={queued()}>
+                <span style={{ bg: color(), fg: theme.background, bold: true }}> QUEUED </span>
+              </Show>
             </text>
-            <text fg={hover() ? theme.secondary : theme.text} attributes={TextAttributes.BOLD}>
-              {text()}
-            </text>
+            <text fg={hover() ? theme.secondary : theme.text}>{text()}</text>
             <Show when={files().length}>
               <box flexDirection="row" paddingTop={1} gap={2} flexWrap="wrap">
                 <For each={files()}>
@@ -1144,21 +1161,6 @@ function UserMessage(props: {
                 </For>
               </box>
             </Show>
-            <text fg={theme.diffContext}>
-              <Show
-                when={queued()}
-                fallback={
-                  <Show when={ctx.showTimestamps()}>
-                    <span style={{ fg: theme.textMuted }}>
-                      {Locale.todayTimeOrDateTime(props.message.time.created)}
-                    </span>
-                  </Show>
-                }
-              >
-                <span> </span>
-                <span style={{ bg: color(), fg: theme.background, bold: true }}> QUEUED </span>
-              </Show>
-            </text>
           </box>
         </box>
       </Show>
@@ -1193,8 +1195,43 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
     return props.message.time.completed - user.time.created
   })
 
+  // A turn opens with its first assistant message. Later messages in the same
+  // turn are tool continuations, and re-stamping the mark on each of them turns
+  // one answer into five headers.
+  const isTurnStart = createMemo(() => {
+    const list = messages()
+    const index = list.findIndex((x) => x.id === props.message.id)
+    if (index <= 0) return true
+    return list[index - 1]?.role === "user"
+  })
+
   return (
     <>
+      <Show when={isTurnStart()}>
+        <box paddingLeft={2} marginTop={1} flexShrink={0}>
+          <text>
+            <span
+              style={{
+                fg:
+                  props.message.error?.name === "MessageAbortedError"
+                    ? theme.textMuted
+                    : local.agent.color(props.message.agent),
+                bold: true,
+              }}
+            >
+              ◆
+            </span>
+            <span style={{ fg: theme.text, bold: true }}> arena</span>
+            <span style={{ fg: theme.textMuted }}> · {Locale.titlecase(props.message.mode)}</span>
+            <Show when={duration()}>
+              <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
+            </Show>
+            <Show when={props.message.error?.name === "MessageAbortedError"}>
+              <span style={{ fg: theme.textMuted }}> · interrupted</span>
+            </Show>
+          </text>
+        </box>
+      </Show>
       <For each={props.parts}>
         {(part, index) => {
           const component = createMemo(() => PART_MAPPING[part.type as keyof typeof PART_MAPPING])
@@ -1224,31 +1261,6 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
           <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
         </box>
       </Show>
-      <Switch>
-        <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box paddingLeft={2}>
-            <text marginTop={1}>
-              <span
-                style={{
-                  fg:
-                    props.message.error?.name === "MessageAbortedError"
-                      ? theme.textMuted
-                      : local.agent.color(props.message.agent),
-                }}
-              >
-                ▣{" "}
-              </span>{" "}
-              <span style={{ fg: theme.textMuted }}>{Locale.titlecase(props.message.mode)}</span>
-              <Show when={duration()}>
-                <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
-              </Show>
-              <Show when={props.message.error?.name === "MessageAbortedError"}>
-                <span style={{ fg: theme.textMuted }}> · interrupted</span>
-              </Show>
-            </text>
-          </box>
-        </Match>
-      </Switch>
     </>
   )
 }
@@ -1328,11 +1340,6 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
   return (
     <Show when={props.part.text.trim()}>
       <box id={"text-" + props.part.id} paddingLeft={2} marginTop={1} flexShrink={0}>
-        <Show when={props.last || !props.part.time?.end}>
-          <text fg={theme.primary} attributes={TextAttributes.BOLD}>
-            Arena
-          </text>
-        </Show>
         <Index each={blocks()}>
           {(block) => (
             <Show
