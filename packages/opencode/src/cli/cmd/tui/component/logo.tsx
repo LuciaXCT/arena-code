@@ -56,13 +56,12 @@ export function OldBanner() {
 
 export function Logo() {
   const { theme } = useTheme()
+  // One line. The second line ("free models are ready…") explained the obvious
+  // and the composer placeholder already says what to do, so it was noise.
   return (
     <box flexDirection="column" alignItems="center" gap={0} flexShrink={0}>
       <text fg={theme.text} attributes={TextAttributes.BOLD} selectable={false}>
-        What can I build for you?
-      </text>
-      <text fg={theme.textMuted} selectable={false}>
-        Free models are ready — type a prompt to start
+        what are we building, lucia?
       </text>
     </box>
   )
