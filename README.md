@@ -75,6 +75,32 @@ Want arena to claim the `opencode` command anyway? `ARENA_TAKE_OPENCODE=1`.
 Uninstall removes the `arena` launcher, the binary, and the musl libs — and only removes
 `opencode` if that launcher is ours; your own binary is never touched.
 
+### Keeping it light on a phone
+
+Arena is one musl binary plus three runtime libs — roughly **4 MB** on top of the binary.
+There is no rootfs, no proot-distro image quietly holding a few hundred megabytes, so the
+resident set stays close to what the process actually uses. A few more knobs trim it on a
+low-RAM device:
+
+- `export OPENCODE_DISABLE_LSP_DOWNLOAD=1` — don't fetch language servers you aren't using.
+- Set `"autoupdate": false` in `~/.config/opencode/opencode.json` — Arena now checks this
+  **before** its version request, so the launch skips the network round-trip entirely.
+- Only list MCP servers you actually use; each one is a child process with its own memory.
+
+### Updating from the phone
+
+If you cloned the repo on the device:
+
+```bash
+git -C ~/arena-code pull
+```
+
+Otherwise re-run the installer — it upgrades in place and backs up the previous binary first:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LuciaXCT/arena-code/main/bash.sh | bash
+```
+
 ### Configuration
 
 Arena reads `~/.config/opencode/opencode.json` (or `.jsonc`), same as opencode. Provider

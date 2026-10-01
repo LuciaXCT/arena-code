@@ -10,14 +10,19 @@ export async function upgrade() {
   if (Flag.ARENA || Flag.isArena() || Installation.VERSION.includes("arena")) return
 
   const config = await Config.global()
+
+  // Honour the opt-out before the network round-trip. Fetching `latest` first
+  // meant every launch paid for a version check even when updates were turned
+  // off, which is the common case for an Arena build.
+  if (config.autoupdate === false || Flag.OPENCODE_DISABLE_AUTOUPDATE) {
+    return
+  }
+
   const method = await Installation.method()
   const latest = await Installation.latest(method).catch(() => {})
   if (!latest) return
   if (Installation.VERSION === latest) return
 
-  if (config.autoupdate === false || Flag.OPENCODE_DISABLE_AUTOUPDATE) {
-    return
-  }
   if (config.autoupdate === "notify") {
     await Bus.publish(Installation.Event.UpdateAvailable, { version: latest })
     return
