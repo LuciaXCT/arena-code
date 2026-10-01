@@ -342,23 +342,13 @@ export namespace SessionProcessor {
               stack: JSON.stringify(e.stack),
             })
             const error = MessageV2.fromError(e, { providerID: input.model.providerID })
-            const retry = SessionRetry.retryable(error)
-            if (retry !== undefined) {
-              attempt++
-              const delay = SessionRetry.delay(attempt, error.name === "APIError" ? error : undefined)
-              SessionStatus.set(input.sessionID, {
-                type: "retry",
-                attempt,
-                message: retry,
-                next: Date.now() + delay,
-              })
-              await SessionRetry.sleep(delay, input.abort).catch(() => {})
-              continue
-            }
 
-            // A free lane that dies mid-stream is not retryable in place, so the
-            // retry above never fires and the turn ends. Move to the next free
-            // model and replay the same request there instead.
+            // Rotation is checked BEFORE the in-place retry. A 429 or a 504 from
+            // a free lane is marked retryable, so the retry used to win and we
+            // re-sent the exact same dead lane until the turn ran out of
+            // attempts - the rotation below was unreachable for every error
+            // that mattered. Only fall back to retrying in place once the
+            // rotation has nothing left to offer.
             const problem = SessionModelRotate.reason(error)
             if (problem && swaps < MAX_MODEL_SWAPS) {
               const model = await SessionModelRotate.next(streamInput.model, problem)
@@ -377,6 +367,20 @@ export namespace SessionProcessor {
                 await SessionRetry.sleep(300, input.abort).catch(() => {})
                 continue
               }
+            }
+
+            const retry = SessionRetry.retryable(error)
+            if (retry !== undefined) {
+              attempt++
+              const delay = SessionRetry.delay(attempt, error.name === "APIError" ? error : undefined)
+              SessionStatus.set(input.sessionID, {
+                type: "retry",
+                attempt,
+                message: retry,
+                next: Date.now() + delay,
+              })
+              await SessionRetry.sleep(delay, input.abort).catch(() => {})
+              continue
             }
 
             input.assistantMessage.error = error

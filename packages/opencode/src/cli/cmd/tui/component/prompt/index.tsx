@@ -971,21 +971,14 @@ export function Prompt(props: PromptProps) {
             vertical: theme.backgroundElement.a !== 0 ? "╹" : " ",
           }}
         >
+          {/* No block cap under the composer. The filled panel already ends
+              the field; a row of ▀ on top of it just added weight. What is
+              left is the rail terminator and a blank row of breathing space. */}
           <box
             height={1}
             border={["bottom"]}
             borderColor={theme.backgroundElement}
-            customBorderChars={
-              theme.backgroundElement.a !== 0
-                ? {
-                    ...EmptyBorder,
-                    horizontal: "▀",
-                  }
-                : {
-                    ...EmptyBorder,
-                    horizontal: " ",
-                  }
-            }
+            customBorderChars={{ ...EmptyBorder, horizontal: " " }}
           />
         </box>
         <box flexDirection="row" justifyContent="space-between">

@@ -57,7 +57,7 @@ import { DialogConfirm } from "@tui/ui/dialog-confirm"
 import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
-import { StatusPanel } from "../../component/status-panel"
+import { StatusPanel, statusPanelWidth } from "../../component/status-panel"
 import { StatusStrip } from "../../component/status-strip"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import parsers from "../../../../../../parsers-config.ts"
@@ -134,7 +134,24 @@ export function Session() {
 
   const dimensions = useTerminalDimensions()
   const [conceal, setConceal] = createSignal(true)
-  const [statusOpen, setStatusOpen] = createSignal(false)
+  // The HUD is on by default - it is the answer to "what is this session
+  // doing", and a panel you have to remember to open never gets read.
+  //
+  // The key is namespaced. `status_panel_visible` is an upstream opencode key
+  // that lives in the same kv file whenever ARENA is not exported, so sharing
+  // the name meant upstream writing `false` silently hid this panel for good.
+  const [statusOpen, setStatusOpen] = createSignal(kv.get("arena_status_panel_visible", true))
+  function closeStatusPanel() {
+    setStatusOpen(false)
+    kv.set("arena_status_panel_visible", false)
+  }
+  function toggleStatusPanel() {
+    setStatusOpen((prev) => {
+      const next = !prev
+      kv.set("arena_status_panel_visible", next)
+      return next
+    })
+  }
   const [showThinking, setShowThinking] = createSignal(kv.get("thinking_visibility", false))
   const [showTimestamps, setShowTimestamps] = createSignal(kv.get("timestamps", "hide") === "show")
   const [usernameVisible, setUsernameVisible] = createSignal(kv.get("username_visible", true))
@@ -146,7 +163,10 @@ export function Session() {
 
   // Full-width chat: no side rail and no width math. The column is the whole
   // terminal minus the gutters this screen paints with.
-  const contentWidth = createMemo(() => dimensions().width - 4)
+  // The status rail is a real column on the left, so the chat lays out in the
+  // width that is left over instead of wrapping around an overlay.
+  const statusRail = createMemo(() => (statusOpen() && session() ? statusPanelWidth(dimensions().width) : 0))
+  const contentWidth = createMemo(() => dimensions().width - 4 - statusRail())
 
   const scrollAcceleration = createMemo(() => {
     const tui = sync.data.config.tui
@@ -199,8 +219,13 @@ export function Session() {
     }
   })
 
-  // Esc closes the status overlay first, before it can reach the prompt and be
-  // read as "interrupt the session".
+  // Esc hides the status overlay for this session, before it can reach the
+  // prompt and be read as "interrupt the session".
+  //
+  // Deliberately NOT persisted. Esc is the key you press to interrupt a turn,
+  // and letting that silently write "panel off" to disk meant one stray press
+  // hid the panel for every future session with no visible cause. Only the ✕
+  // and the toggle button make a lasting choice.
   useKeyboard((evt) => {
     if (!statusOpen()) return
     if (evt.name === "escape") {
@@ -456,7 +481,7 @@ export function Session() {
       keybind: "sidebar_toggle",
       category: "Session",
       onSelect: (dialog) => {
-        setStatusOpen((prev) => !prev)
+        toggleStatusPanel()
         dialog.clear()
       },
     },
@@ -914,8 +939,13 @@ export function Session() {
         sync,
       }}
     >
-      <box flexDirection="column" width="100%" height="100%" backgroundColor={theme.background}>
-        <box width="100%" flexGrow={1} minHeight={0} flexDirection="column" paddingBottom={1} paddingTop={1} paddingLeft={3} paddingRight={3} gap={1}>
+      {/* Side by side: the status rail is a slim column on the left, the chat
+          lays out in the width that is left over. */}
+      <box flexDirection="row" width="100%" height="100%" backgroundColor={theme.background}>
+        <Show when={statusOpen() && session()}>
+          <StatusPanel sessionID={route.sessionID} onClose={closeStatusPanel} />
+        </Show>
+        <box flexGrow={1} minWidth={0} minHeight={0} flexDirection="column" paddingBottom={1} paddingTop={1} paddingLeft={3} paddingRight={3} gap={1}>
           <Show when={session()}>
             <Header />
             {/* Empty-state hint lives beside the scrollbox, not inside it: a
@@ -1045,7 +1075,12 @@ export function Session() {
               </For>
             </scrollbox>
             <Show when={session()}>
-              <StatusStrip sessionID={route.sessionID} />
+              <StatusStrip
+                sessionID={route.sessionID}
+                panelOpen={statusOpen()}
+                panelWidth={statusRail()}
+                onTogglePanel={toggleStatusPanel}
+              />
             </Show>
             <box flexShrink={0}>
               <Show when={permissions().length > 0}>
@@ -1068,9 +1103,6 @@ export function Session() {
           </Show>
           <Toast />
         </box>
-        <Show when={statusOpen() && session()}>
-          <StatusPanel sessionID={route.sessionID} onClose={() => setStatusOpen(false)} />
-        </Show>
       </box>
     </context.Provider>
   )
@@ -1138,7 +1170,7 @@ function UserMessage(props: {
             flexShrink={0}
           >
             <text>
-              <span style={{ fg: color(), bold: true }}>❯</span>
+              <span style={{ fg: color(), bold: true }}>▸</span>
               <span style={{ fg: theme.text, bold: true }}> you</span>
               <Show when={ctx.showTimestamps()}>
                 <span style={{ fg: theme.textMuted }}>
